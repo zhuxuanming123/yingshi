@@ -1,0 +1,15 @@
+# ============================================================
+# local.properties 模板
+# 使用步骤：
+#   1. 把本文件复制一份，改名为 local.properties（与它同目录）
+#   2. 在 TMDB_API_KEY= 后面填入你的 TMDB API Key
+#   3. local.properties 已被 .gitignore 忽略，不会提交到 Git
+#
+# TMDB API Key 申请地址：https://www.themoviedb.org/settings/api
+# ============================================================
+
+# SDK 路径（Android Studio 通常会自动生成，无需手动改）
+sdk.dir=C\:\\Users\\86137\\AppData\\Local\\Android\\Sdk
+
+# TMDB API Key（必填）
+TMDB_API_KEY=请在这里填入你的TMDB_API_Key

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+        应用主题。
+        Compose 项目的 XML 主题只负责系统级界面（启动、状态栏等），
+        真正 UI 样式在 Compose 侧（ui/theme/Theme.kt）控制。
+        这里继承 Material3 无 ActionBar 主题即可。
+    -->
+    <style name="Theme.B8MovieTracker" parent="android:Theme.Material.Light.NoActionBar" />
+</resources>

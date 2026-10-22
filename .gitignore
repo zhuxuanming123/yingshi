@@ -1,0 +1,25 @@
+# ============================================================
+# Git 忽略文件
+# 重点：local.properties 里存着 TMDB API Key，绝不能提交到仓库
+# ============================================================
+
+# 本地配置（含敏感 API Key）
+local.properties
+
+# Gradle 构建产物
+.gradle/
+build/
+**/build/
+
+# IDE
+.idea/
+*.iml
+.DS_Store
+
+# Android
+captures/
+.externalNativeBuild/
+.cxx/
+*.apk
+*.aab
+*.keystore

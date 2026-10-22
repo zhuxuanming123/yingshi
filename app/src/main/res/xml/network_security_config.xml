@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    网络安全配置：
+    禁止明文 HTTP 流量（生产安全），只信任系统证书。
+    TMDB 接口走 HTTPS，符合此配置。
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>
