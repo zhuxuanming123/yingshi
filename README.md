@@ -30,18 +30,30 @@
 │   └── src/main/
 │       ├── AndroidManifest.xml
 │       └── java/com/b8/movietracker/
-│           ├── data/          # 数据层（remote 网络 / local 数据库）
-│           ├── domain/        # 领域模型
-│           ├── di/            # 依赖注入
-│           └── util/          # 工具
+│           ├── data/
+│           │   ├── remote/       # 网络层：TmdbApiService / safeApiCall / MovieMapper / DTO
+│           │   ├── local/        # 本地层：Room（entity / dao / db / Mapper）
+│           │   └── repository/   # 仓库实现：TmdbMovieRepository / RoomFavoriteRepository
+│           ├── domain/
+│           │   ├── model/        # 领域模型：Movie
+│           │   └── repository/   # 仓库接口：MovieRepository / FavoriteRepository
+│           ├── di/               # Hilt：NetworkModule / RepositoryModule / DatabaseModule
+│           └── util/             # ImageUrlBuilder
 ```
+
+## 架构说明
+
+- **MVVM 分层**：UI → ViewModel → Repository → 数据源，单向数据流。
+- **数据源拆分**：网络（MovieRepository）与本地收藏（FavoriteRepository）分离。
+- **三层数据模型**：Dto（网络）/ Entity（数据库）/ Movie（业务）解耦。
+- **API Key 安全**：`local.properties` → BuildConfig → 拦截器，密钥不入库。
 
 ## 迭代路线
 
 - ✅ 阶段0：项目初始化（骨架 + 依赖 + 数据模型 + 网络封装）
 - ⬜ UI 层：四页面 + 导航 + ViewModel
-- ⬜ 网络对接 TMDB
-- ⬜ Room 本地持久化
+- ✅ 网络对接 TMDB（safeApiCall / MovieMapper / Repository 拆分）
+- ✅ Room 本地持久化（收藏写库，重启不丢）
 - ⬜ 图片缓存优化
 - ⬜ 列表分页
 - ⬜ P1 桌面小组件
