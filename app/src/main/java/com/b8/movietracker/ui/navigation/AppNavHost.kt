@@ -11,6 +11,7 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavType
@@ -39,10 +40,19 @@ object Routes {
 
 /**
  * 应用根组件：底部导航（3 个 Tab）+ NavHost 页面容器。
+ *
+ * @param initialMovieId 非空时表示"从通知点击进入"，启动后自动导航到对应详情页
  */
 @Composable
-fun MovieTrackerApp() {
+fun MovieTrackerApp(initialMovieId: Long? = null) {
     val navController = rememberNavController()
+
+    // 通知点击跳转：启动时若有 movieId，导航到详情页
+    LaunchedEffect(Unit) {
+        if (initialMovieId != null) {
+            navController.navigate(Routes.detail(initialMovieId))
+        }
+    }
 
     // 监听当前导航栈顶，用于判断底部栏显示与选中项
     val backStackEntry by navController.currentBackStackEntryAsState()

@@ -10,20 +10,26 @@ import dagger.hilt.android.AndroidEntryPoint
 /**
  * 主入口 Activity。
  *
- * 职责非常轻：只负责 setContent 挂载 Compose 根组件 MovieTrackerApp，
- * 真正的导航、页面、状态都在 MovieTrackerApp 及各自的 Screen 中。
- *
- * @AndroidEntryPoint 启用 Hilt 字段注入（当前虽未直接注入字段，
- *   但各 Screen 通过 hiltViewModel() 获取 ViewModel，仍需此注解激活 Hilt）。
+ * 阶段5 新增：处理通知点击跳转。
+ *   - 通知的 PendingIntent 携带 EXTRA_MOVIE_ID
+ *   - 这里读取它，传给 MovieTrackerApp，由导航自动打开对应影片详情页
  */
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
+    companion object {
+        /** 通知点击跳转详情页时传递的影片 ID key */
+        const val EXTRA_MOVIE_ID = "movie_id"
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // 读取通知传来的 movieId（-1 表示非通知启动，即正常启动）
+        val movieId = intent.getLongExtra(EXTRA_MOVIE_ID, -1L).takeIf { it != -1L }
+
         setContent {
             B8MovieTrackerTheme {
-                MovieTrackerApp()
+                MovieTrackerApp(initialMovieId = movieId)
             }
         }
     }

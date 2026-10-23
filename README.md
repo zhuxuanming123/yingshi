@@ -71,13 +71,15 @@ adb shell settings put global http_proxy 10.0.2.2:7897
 │           │   ├── model/            # 领域模型：Movie
 │           │   └── repository/       # 仓库接口：MovieRepository / FavoriteRepository
 │           ├── di/                   # Hilt：NetworkModule / RepositoryModule / DatabaseModule
+│           ├── notification/         # 通知：NotificationHelper（上映提醒）
+│           ├── worker/               # 后台任务：WorkManager（定时扫描片单）
 │           ├── ui/
 │           │   ├── common/           # UiState + 通用状态视图
 │           │   ├── components/       # MovieListItem / PosterImage
 │           │   ├── home/ search/ mylist/ detail/   # 4 个页面
 │           │   ├── navigation/       # NavHost + 路由
 │           │   └── theme/
-│           └── util/                 # ImageUrlBuilder
+│           └── util/                 # ImageUrlBuilder / DateUtils
 ```
 
 ---
@@ -145,6 +147,7 @@ local.properties（.gitignore 忽略）
 - ✅ 网络对接 TMDB（safeApiCall / Mapper / Repository 拆分）
 - ✅ Room 本地持久化（收藏写库，重启不丢）
 - ✅ 图片缓存与加载优化
+- ✅ 后台任务与上映提醒（阶段5：WorkManager + 通知）
 - ⬜ 列表分页加载
 - ⬜ P1 桌面小组件（Glance + WorkManager）
 - ⬜ 打磨（深色模式 / 错误重试 / 性能 / 打包）

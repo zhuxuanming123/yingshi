@@ -103,6 +103,7 @@ dependencies {
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)                                // Hilt 注解处理器
     implementation(libs.androidx.hilt.navigation.compose)  // Compose 中获取 HiltViewModel
+    implementation(libs.androidx.hilt.work)               // Hilt 集成 WorkManager
 
     // ===================== 网络 =====================
     implementation(libs.retrofit)                          // Retrofit 核心
