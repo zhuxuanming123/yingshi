@@ -115,6 +115,10 @@ dependencies {
     // ===================== 图片加载/缓存 =====================
     implementation(libs.coil.compose)                      // Coil：协程友好的图片加载
 
+    // ===================== 视频播放 =====================
+    implementation(libs.androidx.media3.exoplayer)         // Media3 ExoPlayer 核心
+    implementation(libs.androidx.media3.ui)                // Media3 UI（PlayerView 控制栏）
+
     // ===================== 数据库 =====================
     implementation(libs.room.runtime)                      // Room
     implementation(libs.room.ktx)                          // Room 协程扩展

@@ -16,12 +16,7 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
- * 详情 ViewModel：加载详情（网络）+ 维护收藏态（本地）。
- *
- * 为什么拆成两个数据源？
- *   - 详情数据来自网络（MovieRepository）
- *   - 收藏态来自本地（FavoriteRepository）
- *   二者独立变化，用两个 StateFlow 分别暴露，UI 各自订阅。
+ * 详情 ViewModel：加载详情 + 维护收藏态 + 加载预告片信息。
  */
 @HiltViewModel
 class DetailViewModel @Inject constructor(
@@ -30,20 +25,24 @@ class DetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
-    /** 从路由参数读取影片 ID */
     private val movieId: Long = savedStateHandle.get<Long>("movieId") ?: -1L
 
-    /** 详情数据状态（网络） */
+    /** 详情数据状态 */
     private val _uiState = MutableStateFlow<UiState<Movie>>(UiState.Loading)
     val uiState: StateFlow<UiState<Movie>> = _uiState.asStateFlow()
 
-    /** 是否已收藏（本地，响应式） */
+    /** 是否已收藏 */
     private val _isFavorite = MutableStateFlow(false)
     val isFavorite: StateFlow<Boolean> = _isFavorite.asStateFlow()
+
+    /** 预告片的 YouTube key（无预告片为 null），UI 据此跳转 YouTube 观看 */
+    private val _trailerKey = MutableStateFlow<String?>(null)
+    val trailerKey: StateFlow<String?> = _trailerKey.asStateFlow()
 
     init {
         loadDetail()
         observeFavorite()
+        loadTrailer()
     }
 
     /** 加载详情（供 init 与错误态重试共用） */
@@ -69,7 +68,16 @@ class DetailViewModel @Inject constructor(
         }
     }
 
-    /** 切换收藏：拿到当前影片对象后交给收藏仓库处理 */
+    /** 加载预告片 YouTube key（任务1：对接 TMDB 视频接口） */
+    private fun loadTrailer() {
+        viewModelScope.launch {
+            movieRepository.getMovieTrailer(movieId).collect { key ->
+                _trailerKey.value = key
+            }
+        }
+    }
+
+    /** 切换收藏 */
     fun toggleFavorite() {
         val movie = (_uiState.value as? UiState.Success)?.data ?: return
         viewModelScope.launch {

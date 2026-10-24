@@ -21,4 +21,7 @@ interface MovieRepository {
 
     /** 按关键词搜索影片 */
     fun searchMovies(query: String): Flow<List<Movie>>
+
+    /** 获取影片官方预告片（返回 YouTube 的 video key，无预告片返回 null） */
+    fun getMovieTrailer(movieId: Long): Flow<String?>
 }

@@ -2,6 +2,7 @@ package com.b8.movietracker.data.remote
 
 import com.b8.movietracker.data.remote.dto.MovieDetailDto
 import com.b8.movietracker.data.remote.dto.MovieListResponseDto
+import com.b8.movietracker.data.remote.dto.VideoListResponseDto
 import retrofit2.http.GET
 import retrofit2.http.Path
 import retrofit2.http.Query
@@ -61,4 +62,10 @@ interface TmdbApiService {
         @Query("language") language: String = ApiConfig.DEFAULT_LANGUAGE,
         @Query("append_to_response") appendToResponse: String = "credits,videos",
     ): MovieDetailDto
+
+    /** 获取影片视频列表（预告片/花絮等，任务：预告片播放） */
+    @GET("movie/{movie_id}/videos")
+    suspend fun getMovieVideos(
+        @Path("movie_id") movieId: Long,
+    ): VideoListResponseDto
 }

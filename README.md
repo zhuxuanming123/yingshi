@@ -16,6 +16,7 @@
 | 数据库 | Room |
 | 依赖注入 | Hilt |
 | 后台任务 | WorkManager |
+| 视频播放 | Media3 (ExoPlayer) |
 
 ---
 
@@ -72,10 +73,11 @@ adb shell settings put global http_proxy 10.0.2.2:7897
 │           │   └── repository/       # 仓库接口：MovieRepository / FavoriteRepository
 │           ├── di/                   # Hilt：NetworkModule / RepositoryModule / DatabaseModule
 │           ├── notification/         # 通知：NotificationHelper（上映提醒）
+│           ├── player/               # 播放器：PlayerManager（ExoPlayer 封装）
 │           ├── worker/               # 后台任务：WorkManager（定时扫描片单）
 │           ├── ui/
 │           │   ├── common/           # UiState + 通用状态视图
-│           │   ├── components/       # MovieListItem / PosterImage
+│           │   ├── components/       # MovieListItem / PosterImage / VideoPlayer
 │           │   ├── home/ search/ mylist/ detail/   # 4 个页面
 │           │   ├── navigation/       # NavHost + 路由
 │           │   └── theme/
@@ -148,6 +150,7 @@ local.properties（.gitignore 忽略）
 - ✅ Room 本地持久化（收藏写库，重启不丢）
 - ✅ 图片缓存与加载优化
 - ✅ 后台任务与上映提醒（阶段5：WorkManager + 通知）
+- ✅ 预告片播放（Media3 + TMDB 视频接口，跳转 YouTube 观看）
 - ⬜ 列表分页加载
 - ⬜ P1 桌面小组件（Glance + WorkManager）
 - ⬜ 打磨（深色模式 / 错误重试 / 性能 / 打包）

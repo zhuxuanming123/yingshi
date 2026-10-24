@@ -1,5 +1,7 @@
 package com.b8.movietracker.ui.detail
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -23,6 +25,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -48,6 +51,8 @@ fun DetailScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     // 收藏态独立订阅（与详情数据分离，收藏切换时只刷新按钮，不重新请求详情）
     val isFavorite by viewModel.isFavorite.collectAsStateWithLifecycle()
+    // 预告片：YouTube key（点击跳转 YouTube 观看）
+    val trailerKey by viewModel.trailerKey.collectAsStateWithLifecycle()
 
     when (val state = uiState) {
         is UiState.Loading -> LoadingView()
@@ -56,6 +61,7 @@ fun DetailScreen(
         is UiState.Success -> DetailContent(
             movie = state.data,
             isFavorite = isFavorite,
+            trailerKey = trailerKey,
             onBack = onBack,
             onToggleFavorite = viewModel::toggleFavorite,
         )
@@ -67,9 +73,11 @@ fun DetailScreen(
 private fun DetailContent(
     movie: Movie,
     isFavorite: Boolean,
+    trailerKey: String?,
     onBack: () -> Unit,
     onToggleFavorite: () -> Unit,
 ) {
+    val context = LocalContext.current
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -130,6 +138,34 @@ private fun DetailContent(
                 text = movie.overview ?: "暂无简介",
                 style = MaterialTheme.typography.bodyMedium,
             )
+
+            Spacer(Modifier.height(16.dp))
+
+            // 预告片区域：跳转 YouTube 观看真实官方预告片
+            Text(text = "预告片", style = MaterialTheme.typography.titleMedium)
+            Spacer(Modifier.height(8.dp))
+            if (trailerKey != null) {
+                Button(
+                    onClick = {
+                        // 用 Intent 打开 YouTube 观看官方预告片
+                        val intent = Intent(
+                            Intent.ACTION_VIEW,
+                            Uri.parse("https://www.youtube.com/watch?v=$trailerKey"),
+                        )
+                        context.startActivity(intent)
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("▶ 观看官方预告片")
+                }
+            } else {
+                // 无预告片 → 友好提示，不崩溃
+                Text(
+                    text = "暂无预告片",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.Gray,
+                )
+            }
 
             Spacer(Modifier.height(24.dp))
 

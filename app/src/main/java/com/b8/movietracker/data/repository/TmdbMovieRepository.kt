@@ -41,4 +41,16 @@ class TmdbMovieRepository @Inject constructor(
         val response = safeApiCall { apiService.searchMovies(query = query) }
         emit(response.results.map(MovieMapper::toMovie))
     }.flowOn(Dispatchers.IO)
+
+    /**
+     * 获取影片官方预告片（任务1）。
+     * 筛选 type=Trailer 且 site=YouTube 的预告片，返回其 YouTube key（无则 null）。
+     */
+    override fun getMovieTrailer(movieId: Long): Flow<String?> = flow {
+        val response = safeApiCall { apiService.getMovieVideos(movieId) }
+        val trailer = response.results.firstOrNull {
+            it.type == "Trailer" && it.site == "YouTube"
+        }
+        emit(trailer?.key)
+    }.flowOn(Dispatchers.IO)
 }
