@@ -1,5 +1,6 @@
 package com.b8.movietracker.data.remote
 
+import com.b8.movietracker.data.remote.dto.GenreListResponseDto
 import com.b8.movietracker.data.remote.dto.MovieDetailDto
 import com.b8.movietracker.data.remote.dto.MovieListResponseDto
 import com.b8.movietracker.data.remote.dto.VideoListResponseDto
@@ -68,4 +69,22 @@ interface TmdbApiService {
     suspend fun getMovieVideos(
         @Path("movie_id") movieId: Long,
     ): VideoListResponseDto
+
+    /** 获取影片类型字典（任务1：筛选用，如 动作/喜剧/科幻） */
+    @GET("genre/movie/list")
+    suspend fun getMovieGenres(
+        @Query("language") language: String = ApiConfig.DEFAULT_LANGUAGE,
+    ): GenreListResponseDto
+
+    /** 按条件发现影片（任务1：组合筛选） */
+    @GET("discover/movie")
+    suspend fun discoverMovies(
+        @Query("with_genres") withGenres: String?,
+        @Query("vote_average.gte") minVote: Double?,
+        @Query("primary_release_date.gte") fromDate: String?,
+        @Query("primary_release_date.lte") toDate: String?,
+        @Query("sort_by") sortBy: String,
+        @Query("page") page: Int = 1,
+        @Query("language") language: String = ApiConfig.DEFAULT_LANGUAGE,
+    ): MovieListResponseDto
 }

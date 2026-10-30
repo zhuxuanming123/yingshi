@@ -3,6 +3,9 @@ package com.b8.movietracker.data.repository
 import com.b8.movietracker.data.remote.MovieMapper
 import com.b8.movietracker.data.remote.TmdbApiService
 import com.b8.movietracker.data.remote.safeApiCall
+import com.b8.movietracker.domain.filter.FilterEngine
+import com.b8.movietracker.domain.model.FilterCriteria
+import com.b8.movietracker.domain.model.Genre
 import com.b8.movietracker.domain.model.Movie
 import com.b8.movietracker.domain.repository.MovieRepository
 import kotlinx.coroutines.Dispatchers
@@ -52,5 +55,26 @@ class TmdbMovieRepository @Inject constructor(
             it.type == "Trailer" && it.site == "YouTube"
         }
         emit(trailer?.key)
+    }.flowOn(Dispatchers.IO)
+
+    /** 获取类型字典（任务1：筛选） */
+    override fun getMovieGenres(): Flow<List<Genre>> = flow {
+        val response = safeApiCall { apiService.getMovieGenres() }
+        emit(response.genres.map { Genre(it.id, it.name) })
+    }.flowOn(Dispatchers.IO)
+
+    /** 按筛选条件发现影片（任务1：组合筛选，条件由 FilterEngine 组装） */
+    override fun discoverMovies(criteria: FilterCriteria): Flow<List<Movie>> = flow {
+        val query = FilterEngine.buildQuery(criteria)
+        val response = safeApiCall {
+            apiService.discoverMovies(
+                withGenres = query["with_genres"],
+                minVote = query["vote_average.gte"]?.toDoubleOrNull(),
+                fromDate = query["primary_release_date.gte"],
+                toDate = query["primary_release_date.lte"],
+                sortBy = query["sort_by"] ?: "popularity.desc",
+            )
+        }
+        emit(response.results.map(MovieMapper::toMovie))
     }.flowOn(Dispatchers.IO)
 }

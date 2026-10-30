@@ -1,11 +1,14 @@
 package com.b8.movietracker.di
 
 import com.b8.movietracker.data.local.dao.MovieDao
+import com.b8.movietracker.data.local.dao.SearchHistoryDao
 import com.b8.movietracker.data.remote.TmdbApiService
 import com.b8.movietracker.data.repository.RoomFavoriteRepository
+import com.b8.movietracker.data.repository.RoomSearchHistoryRepository
 import com.b8.movietracker.data.repository.TmdbMovieRepository
 import com.b8.movietracker.domain.repository.FavoriteRepository
 import com.b8.movietracker.domain.repository.MovieRepository
+import com.b8.movietracker.domain.repository.SearchHistoryRepository
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -33,4 +36,10 @@ object RepositoryModule {
     @Singleton
     fun provideFavoriteRepository(movieDao: MovieDao): FavoriteRepository =
         RoomFavoriteRepository(movieDao)
+
+    /** 搜索历史：Room 实现 */
+    @Provides
+    @Singleton
+    fun provideSearchHistoryRepository(searchHistoryDao: SearchHistoryDao): SearchHistoryRepository =
+        RoomSearchHistoryRepository(searchHistoryDao)
 }

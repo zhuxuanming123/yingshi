@@ -1,5 +1,7 @@
 package com.b8.movietracker.domain.repository
 
+import com.b8.movietracker.domain.model.FilterCriteria
+import com.b8.movietracker.domain.model.Genre
 import com.b8.movietracker.domain.model.Movie
 import kotlinx.coroutines.flow.Flow
 
@@ -24,4 +26,10 @@ interface MovieRepository {
 
     /** 获取影片官方预告片（返回 YouTube 的 video key，无预告片返回 null） */
     fun getMovieTrailer(movieId: Long): Flow<String?>
+
+    /** 获取影片类型字典（任务1：筛选） */
+    fun getMovieGenres(): Flow<List<Genre>>
+
+    /** 按筛选条件发现影片（任务1：组合筛选） */
+    fun discoverMovies(criteria: FilterCriteria): Flow<List<Movie>>
 }
