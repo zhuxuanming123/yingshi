@@ -81,6 +81,28 @@ fun MovieListItem(
                     color = Color(0xFFF57C00),
                     fontWeight = FontWeight.Bold,
                 )
+                // 用户评分（标记已看时显示）
+                if (movie.userRating != null) {
+                    Spacer(Modifier.width(12.dp))
+                    Text(
+                        text = "我的评分：${movie.userRating!!.toInt()} 分",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFF1976D2),
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+            }
+
+            // 短评（标记已看时显示）
+            if (!movie.review.isNullOrBlank()) {
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = movie.review,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.Gray,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
         }
     }

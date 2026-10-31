@@ -2,6 +2,7 @@ package com.b8.movietracker.ui.detail
 
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -19,9 +20,13 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -31,17 +36,15 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.b8.movietracker.domain.model.Movie
-import com.b8.movietracker.ui.components.PosterImage
 import com.b8.movietracker.ui.common.EmptyView
 import com.b8.movietracker.ui.common.ErrorView
 import com.b8.movietracker.ui.common.LoadingView
 import com.b8.movietracker.ui.common.UiState
+import com.b8.movietracker.ui.components.PosterImage
 import java.util.Locale
 
 /**
- * 影视详情页：海报大图、简介、上映时间、评分、收藏按钮。
- *
- * @param onBack 返回上一页的回调（popBackStack）
+ * 影视详情页：海报、简介、预告片、想看/已看 + 评分。
  */
 @Composable
 fun DetailScreen(
@@ -49,10 +52,10 @@ fun DetailScreen(
     viewModel: DetailViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    // 收藏态独立订阅（与详情数据分离，收藏切换时只刷新按钮，不重新请求详情）
-    val isFavorite by viewModel.isFavorite.collectAsStateWithLifecycle()
-    // 预告片：YouTube key（点击跳转 YouTube 观看）
+    val isWantToWatch by viewModel.isWantToWatch.collectAsStateWithLifecycle()
+    val isWatched by viewModel.isWatched.collectAsStateWithLifecycle()
     val trailerKey by viewModel.trailerKey.collectAsStateWithLifecycle()
+    var showRatingDialog by remember { mutableStateOf(false) }
 
     when (val state = uiState) {
         is UiState.Loading -> LoadingView()
@@ -60,22 +63,37 @@ fun DetailScreen(
         is UiState.Empty -> EmptyView("影片不存在")
         is UiState.Success -> DetailContent(
             movie = state.data,
-            isFavorite = isFavorite,
+            isWantToWatch = isWantToWatch,
+            isWatched = isWatched,
             trailerKey = trailerKey,
             onBack = onBack,
-            onToggleFavorite = viewModel::toggleFavorite,
+            onToggleWantToWatch = viewModel::toggleWantToWatch,
+            onMarkWatched = { showRatingDialog = true },
+        )
+    }
+
+    // 标记「已看」弹窗
+    if (showRatingDialog) {
+        RatingDialog(
+            onConfirm = { rating, review ->
+                viewModel.markWatched(rating, review)
+                showRatingDialog = false
+            },
+            onDismiss = { showRatingDialog = false },
         )
     }
 }
 
-/** 详情内容（仅在 Success 状态渲染） */
+/** 详情内容 */
 @Composable
 private fun DetailContent(
     movie: Movie,
-    isFavorite: Boolean,
+    isWantToWatch: Boolean,
+    isWatched: Boolean,
     trailerKey: String?,
     onBack: () -> Unit,
-    onToggleFavorite: () -> Unit,
+    onToggleWantToWatch: () -> Unit,
+    onMarkWatched: () -> Unit,
 ) {
     val context = LocalContext.current
     Column(
@@ -83,7 +101,6 @@ private fun DetailContent(
             .fillMaxSize()
             .verticalScroll(rememberScrollState()),
     ) {
-        // 顶部：海报大图 + 返回按钮
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -94,7 +111,6 @@ private fun DetailContent(
                 contentDescription = movie.title,
                 modifier = Modifier.fillMaxSize(),
             )
-
             IconButton(
                 onClick = onBack,
                 modifier = Modifier
@@ -141,13 +157,11 @@ private fun DetailContent(
 
             Spacer(Modifier.height(16.dp))
 
-            // 预告片区域：跳转 YouTube 观看真实官方预告片
             Text(text = "预告片", style = MaterialTheme.typography.titleMedium)
             Spacer(Modifier.height(8.dp))
             if (trailerKey != null) {
                 Button(
                     onClick = {
-                        // 用 Intent 打开 YouTube 观看官方预告片
                         val intent = Intent(
                             Intent.ACTION_VIEW,
                             Uri.parse("https://www.youtube.com/watch?v=$trailerKey"),
@@ -159,7 +173,6 @@ private fun DetailContent(
                     Text("▶ 观看官方预告片")
                 }
             } else {
-                // 无预告片 → 友好提示，不崩溃
                 Text(
                     text = "暂无预告片",
                     style = MaterialTheme.typography.bodyMedium,
@@ -169,11 +182,20 @@ private fun DetailContent(
 
             Spacer(Modifier.height(24.dp))
 
-            Button(
-                onClick = onToggleFavorite,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(if (isFavorite) "♥ 已收藏" else "♡ 收藏")
+            // 想看 / 已看 两个按钮
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedButton(
+                    onClick = onToggleWantToWatch,
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Text(if (isWantToWatch) "✓ 想看" else "＋ 想看")
+                }
+                Button(
+                    onClick = onMarkWatched,
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Text(if (isWatched) "✓ 已看" else "＋ 已看")
+                }
             }
         }
     }

@@ -12,12 +12,14 @@ import com.b8.movietracker.data.local.entity.SearchHistoryEntity
 /**
  * Room 数据库定义。
  *
- * @Database 声明数据库包含哪些表（entities）以及版本号。
- * 阶段升级：version 1 -> 2，新增 search_history 表（搜索历史）。
+ * 版本历史：
+ *   - version 1：movies 表（基础片单）
+ *   - version 2：+ search_history 表（搜索历史）
+ *   - version 3：movies 表 + 观影记录字段（评分/日期/短评/标签/类型）
  */
 @Database(
     entities = [MovieEntity::class, SearchHistoryEntity::class],
-    version = 2,
+    version = 3,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -27,10 +29,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun searchHistoryDao(): SearchHistoryDao
 
     companion object {
-        /**
-         * 数据库迁移：1 -> 2，新增 search_history 表。
-         * 迁移的意义：老用户升级 App 时，保留原有收藏数据，只新增表。
-         */
+        /** 迁移 1 -> 2：新增 search_history 表 */
         val MIGRATION_1_2 = object : Migration(1, 2) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL(
@@ -38,6 +37,17 @@ abstract class AppDatabase : RoomDatabase() {
                         "keyword TEXT PRIMARY KEY NOT NULL, " +
                         "timestamp INTEGER NOT NULL)"
                 )
+            }
+        }
+
+        /** 迁移 2 -> 3：movies 表新增观影记录字段 */
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE movies ADD COLUMN userRating REAL")
+                db.execSQL("ALTER TABLE movies ADD COLUMN watchedDate INTEGER")
+                db.execSQL("ALTER TABLE movies ADD COLUMN review TEXT")
+                db.execSQL("ALTER TABLE movies ADD COLUMN tags TEXT")
+                db.execSQL("ALTER TABLE movies ADD COLUMN genreIds TEXT")
             }
         }
     }

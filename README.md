@@ -66,11 +66,13 @@ adb shell settings put global http_proxy 10.0.2.2:7897
 │           ├── MainActivity.kt       # Compose 入口
 │           ├── data/
 │           │   ├── remote/           # 网络层：TmdbApiService / safeApiCall / MovieMapper / 拦截器 / DTO
-│           │   ├── local/            # 本地层：Room（entity / dao / db / Mapper）
-│           │   └── repository/       # 仓库实现：TmdbMovieRepository / RoomFavoriteRepository
+│           │   ├── local/            # 本地层：Room（entity / dao / db / Mapper，含搜索历史）
+│           │   └── repository/       # 仓库实现：TmdbMovieRepository / RoomFavoriteRepository / RoomSearchHistoryRepository
 │           ├── domain/
-│           │   ├── model/            # 领域模型：Movie
-│           │   └── repository/       # 仓库接口：MovieRepository / FavoriteRepository
+│           │   ├── model/            # 领域模型：Movie / Genre / FilterCriteria
+│           │   ├── repository/       # 仓库接口：MovieRepository / FavoriteRepository / SearchHistoryRepository
+│           │   ├── filter/           # 筛选引擎：FilterEngine
+│           │   └── statistics/       # 统计模块：StatisticsManager
 │           ├── di/                   # Hilt：NetworkModule / RepositoryModule / DatabaseModule
 │           ├── notification/         # 通知：NotificationHelper（上映提醒）
 │           ├── player/               # 播放器：PlayerManager（ExoPlayer 封装）
@@ -151,6 +153,8 @@ local.properties（.gitignore 忽略）
 - ✅ 图片缓存与加载优化
 - ✅ 后台任务与上映提醒（阶段5：WorkManager + 通知）
 - ✅ 预告片播放（Media3 + TMDB 视频接口，跳转 YouTube 观看）
+- ✅ 高级筛选与搜索历史（FilterEngine + 类型/评分/年份/排序 + Room 历史）
+- ✅ 观影记录与个人评分（评分/短评 + 想看/已看 Tab + 统计模块）
 - ⬜ 列表分页加载
 - ⬜ P1 桌面小组件（Glance + WorkManager）
 - ⬜ 打磨（深色模式 / 错误重试 / 性能 / 打包）

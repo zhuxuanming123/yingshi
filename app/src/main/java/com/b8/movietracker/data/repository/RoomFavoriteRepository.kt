@@ -2,6 +2,7 @@ package com.b8.movietracker.data.repository
 
 import com.b8.movietracker.data.local.MovieEntityMapper
 import com.b8.movietracker.data.local.dao.MovieDao
+import com.b8.movietracker.data.local.entity.MovieEntity
 import com.b8.movietracker.domain.model.Movie
 import com.b8.movietracker.domain.repository.FavoriteRepository
 import kotlinx.coroutines.Dispatchers
@@ -11,36 +12,34 @@ import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 /**
- * Room 本地收藏仓库（任务3：收藏写入本地数据库，我的片单从 Room 读取）。
- *
- * 替换阶段2 的 InMemoryFavoriteRepository，实现「重启 App 数据不丢失」。
- *
- * 线程策略（任务4）：
- *   - getFavoriteMovies 返回 Room 的 Flow，Room 内部线程池自动处理，不阻塞主线程；
- *   - toggleFavorite 里的 DAO 调用是 suspend，但仍显式用 withContext(Dispatchers.IO)
- *     包裹，确保数据库 IO 明确落在 IO 调度器上。
+ * 收藏的 Room 实现（想看/已看 + 观影记录）。
  */
 class RoomFavoriteRepository @Inject constructor(
     private val movieDao: MovieDao,
 ) : FavoriteRepository {
 
-    /** 从 Room 读取全部片单，映射成领域模型（响应式，收藏变化自动刷新） */
-    override fun getFavoriteMovies(): Flow<List<Movie>> =
-        movieDao.getAllMovies().map { entities ->
+    /** 按状态查询（想看/已看），Room Flow 响应式 */
+    override fun getMoviesByStatus(status: Int): Flow<List<Movie>> =
+        movieDao.getMoviesByStatus(status).map { entities ->
             entities.map(MovieEntityMapper::toMovie)
         }
 
-    /** 切换收藏：未收藏则写入数据库，已收藏则删除 */
+    /** 切换「想看」：未收藏则加入想看，已收藏则移除 */
     override suspend fun toggleFavorite(movie: Movie) {
         withContext(Dispatchers.IO) {
             val existing = movieDao.getMovieById(movie.id)
             if (existing == null) {
-                // 未收藏 → 写入数据库
-                movieDao.insert(MovieEntityMapper.toEntity(movie))
+                movieDao.insert(MovieEntityMapper.toEntity(movie, MovieEntity.STATUS_WANT_TO_WATCH))
             } else {
-                // 已收藏 → 从数据库删除
                 movieDao.deleteById(movie.id)
             }
+        }
+    }
+
+    /** 标记「已看」：写入观影记录（评分/日期/短评/标签），REPLACE 实现更新 */
+    override suspend fun markWatched(movie: Movie) {
+        withContext(Dispatchers.IO) {
+            movieDao.insert(MovieEntityMapper.toEntity(movie, MovieEntity.STATUS_WATCHED))
         }
     }
 }

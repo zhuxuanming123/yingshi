@@ -1,20 +1,11 @@
 package com.b8.movietracker.domain.model
 
 /**
- * 影片领域模型（任务4：数据模型）。
+ * 影片领域模型。
  *
- * 与 DTO 的区别：
- *   - 领域模型面向「业务」，字段已加工成 UI 可直接使用（如完整图片 URL）
- *   - DTO 面向「网络」，字段与 JSON 一一对应（如相对路径 poster_path）
- *
- * 字段说明（对应任务要求）：
- *   id         —— 影片 ID
- *   title      —— 标题
- *   posterUrl  —— 海报完整地址（已拼接 image base url，可直接给 Coil 加载）
- *   overview   —— 简介
- *   releaseDate—— 上映日期
- *   voteAverage—— 评分
- *   isFavorite —— 收藏状态（阶段6 与本地「想看/已看」清单打通）
+ * 基础字段：id / title / posterUrl / overview / releaseDate / voteAverage / isFavorite
+ * 观影记录字段（标记已看时填写）：userRating / watchedDate / review / tags
+ * 类型字段（用于类型分布统计）：genreIds
  */
 data class Movie(
     val id: Long,
@@ -24,4 +15,22 @@ data class Movie(
     val releaseDate: String?,
     val voteAverage: Double,
     val isFavorite: Boolean = false,
+
+    /** 收藏状态：null=未收藏，0=想看，1=已看 */
+    val watchStatus: Int? = null,
+
+    /** 影片类型 id 列表（来自 TMDB） */
+    val genreIds: List<Int> = emptyList(),
+
+    /** 用户评分（1-10） */
+    val userRating: Double? = null,
+
+    /** 观影日期时间戳 */
+    val watchedDate: Long? = null,
+
+    /** 短评 */
+    val review: String? = null,
+
+    /** 自定义标签 */
+    val tags: List<String> = emptyList(),
 )

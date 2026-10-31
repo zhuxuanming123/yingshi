@@ -16,7 +16,7 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
- * 详情 ViewModel：加载详情 + 维护收藏态 + 加载预告片信息。
+ * 详情 ViewModel：详情 + 收藏状态（想看/已看）+ 预告片 + 观影记录。
  */
 @HiltViewModel
 class DetailViewModel @Inject constructor(
@@ -31,21 +31,24 @@ class DetailViewModel @Inject constructor(
     private val _uiState = MutableStateFlow<UiState<Movie>>(UiState.Loading)
     val uiState: StateFlow<UiState<Movie>> = _uiState.asStateFlow()
 
-    /** 是否已收藏 */
-    private val _isFavorite = MutableStateFlow(false)
-    val isFavorite: StateFlow<Boolean> = _isFavorite.asStateFlow()
+    /** 是否在「想看」列表 */
+    private val _isWantToWatch = MutableStateFlow(false)
+    val isWantToWatch: StateFlow<Boolean> = _isWantToWatch.asStateFlow()
 
-    /** 预告片的 YouTube key（无预告片为 null），UI 据此跳转 YouTube 观看 */
+    /** 是否在「已看」列表 */
+    private val _isWatched = MutableStateFlow(false)
+    val isWatched: StateFlow<Boolean> = _isWatched.asStateFlow()
+
+    /** 预告片 YouTube key */
     private val _trailerKey = MutableStateFlow<String?>(null)
     val trailerKey: StateFlow<String?> = _trailerKey.asStateFlow()
 
     init {
         loadDetail()
-        observeFavorite()
+        observeWatchStatus()
         loadTrailer()
     }
 
-    /** 加载详情（供 init 与错误态重试共用） */
     fun loadDetail() {
         viewModelScope.launch {
             _uiState.value = UiState.Loading
@@ -59,16 +62,18 @@ class DetailViewModel @Inject constructor(
         }
     }
 
-    /** 观察收藏列表，实时更新「是否已收藏」 */
-    private fun observeFavorite() {
+    /** 观察「想看」「已看」两个列表，更新按钮状态 */
+    private fun observeWatchStatus() {
         viewModelScope.launch {
-            favoriteRepository.getFavoriteMovies().collect { favorites ->
-                _isFavorite.value = favorites.any { it.id == movieId }
-            }
+            favoriteRepository.getMoviesByStatus(FavoriteRepository.STATUS_WANT_TO_WATCH)
+                .collect { list -> _isWantToWatch.value = list.any { it.id == movieId } }
+        }
+        viewModelScope.launch {
+            favoriteRepository.getMoviesByStatus(FavoriteRepository.STATUS_WATCHED)
+                .collect { list -> _isWatched.value = list.any { it.id == movieId } }
         }
     }
 
-    /** 加载预告片 YouTube key（任务1：对接 TMDB 视频接口） */
     private fun loadTrailer() {
         viewModelScope.launch {
             movieRepository.getMovieTrailer(movieId).collect { key ->
@@ -77,11 +82,25 @@ class DetailViewModel @Inject constructor(
         }
     }
 
-    /** 切换收藏 */
-    fun toggleFavorite() {
+    /** 切换「想看」 */
+    fun toggleWantToWatch() {
         val movie = (_uiState.value as? UiState.Success)?.data ?: return
         viewModelScope.launch {
             favoriteRepository.toggleFavorite(movie)
+        }
+    }
+
+    /** 标记「已看」：写入评分 + 短评 + 观影日期 */
+    fun markWatched(rating: Double?, review: String?) {
+        val movie = (_uiState.value as? UiState.Success)?.data ?: return
+        viewModelScope.launch {
+            favoriteRepository.markWatched(
+                movie.copy(
+                    userRating = rating,
+                    watchedDate = System.currentTimeMillis(),
+                    review = review,
+                )
+            )
         }
     }
 }
