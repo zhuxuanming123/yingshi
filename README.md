@@ -133,7 +133,52 @@ sealed interface UiState<out T> { Loading / Success<T> / Empty / Error }
 
 ---
 
-## 八、API Key 安全管理
+## 八、功能模块说明
+
+### 1. 图片缓存与加载（Coil）
+
+- `B8Application` 实现 `ImageLoaderFactory`，全局配置内存(25%)+磁盘(200MB)缓存。
+- `PosterImage` 组件统一占位/错误容错，避免加载失败空白崩溃。
+- `crossfade` 淡入动画，防止滑动闪烁。
+
+### 2. 后台任务与上映提醒（WorkManager + 通知）
+
+- `ReleaseReminderWorker` 定时扫描片单，上映日期临近时发通知。
+- `@HiltWorker` + `HiltWorkerFactory` 实现 Worker 依赖注入。
+- `NotificationHelper` 通知渠道 + `PendingIntent` 点击跳详情页。
+- 通知权限（Android 13+）申请与拒绝降级处理。
+
+### 3. 预告片播放（Media3）
+
+- 对接 TMDB videos 接口，筛选 Trailer 获取 YouTube key。
+- ExoPlayer 播放器封装（`PlayerManager` + `VideoPlayer`，含生命周期管控）。
+- 因 YouTube 加密流 ExoPlayer 无法播放，改用 Intent 跳转 YouTube 观看。
+
+### 4. 筛选引擎（FilterEngine）
+
+- 纯 Kotlin 模块（domain/filter），与 UI 完全解耦，可独立单元测试。
+- `buildQuery()`：把筛选条件（类型/评分/年份/排序）组装成 TMDB discover 接口参数。
+- `validate()`：校验条件合法性（评分 0~10、年份起止合法）。
+
+### 5. 搜索历史
+
+- Room 存储（search_history 表），keyword 作主键去重，重复搜索更新时间戳。
+- 展示最近 10 条，点击快速搜索，一键清空。
+
+### 6. 观影记录与评分
+
+- movies 表扩展观影字段（用户评分/观影日期/短评/标签/类型）。
+- 数据库 2→3 迁移：ALTER TABLE 加可空列，保留老数据。
+- 详情页标记「已看」时填写星级评分 + 短评。
+
+### 7. 统计模块（StatisticsManager）
+
+- 纯 Kotlin 模块（domain/statistics），输入已看列表，输出统计结果。
+- 统计：已看总数、平均评分、本月观影数、类型分布（groupingBy）。
+
+---
+
+## 九、API Key 安全管理
 
 ```
 local.properties（.gitignore 忽略）
@@ -144,7 +189,7 @@ local.properties（.gitignore 忽略）
 
 ---
 
-## 九、迭代路线
+## 十、迭代路线
 
 - ✅ 阶段0：项目初始化（骨架 + 依赖 + 数据模型 + 网络封装）
 - ✅ UI 层：四页面 + 导航 + ViewModel + 统一状态

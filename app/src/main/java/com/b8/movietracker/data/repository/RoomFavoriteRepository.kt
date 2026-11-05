@@ -18,6 +18,12 @@ class RoomFavoriteRepository @Inject constructor(
     private val movieDao: MovieDao,
 ) : FavoriteRepository {
 
+    /** 查询全部收藏（推荐引擎用） */
+    override fun getAllMovies(): Flow<List<Movie>> =
+        movieDao.getAllMovies().map { entities ->
+            entities.map(MovieEntityMapper::toMovie)
+        }
+
     /** 按状态查询（想看/已看），Room Flow 响应式 */
     override fun getMoviesByStatus(status: Int): Flow<List<Movie>> =
         movieDao.getMoviesByStatus(status).map { entities ->

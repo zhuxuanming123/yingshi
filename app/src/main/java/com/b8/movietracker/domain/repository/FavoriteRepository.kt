@@ -8,6 +8,9 @@ import kotlinx.coroutines.flow.Flow
  */
 interface FavoriteRepository {
 
+    /** 查询全部收藏（想看+已看），用于推荐引擎提取用户行为 */
+    fun getAllMovies(): Flow<List<Movie>>
+
     /** 按收藏状态查询影片列表（想看/已看） */
     fun getMoviesByStatus(status: Int): Flow<List<Movie>>
 
