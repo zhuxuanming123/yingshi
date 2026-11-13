@@ -2,10 +2,12 @@ package com.b8.movietracker.ui.mylist
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.b8.movietracker.domain.model.AppSettings
 import com.b8.movietracker.domain.model.Genre
 import com.b8.movietracker.domain.model.Movie
 import com.b8.movietracker.domain.repository.FavoriteRepository
 import com.b8.movietracker.domain.repository.MovieRepository
+import com.b8.movietracker.domain.repository.SettingsRepository
 import com.b8.movietracker.domain.statistics.StatisticsManager
 import com.b8.movietracker.domain.statistics.WatchStatistics
 import com.b8.movietracker.ui.common.UiState
@@ -24,6 +26,7 @@ import javax.inject.Inject
 class MyListViewModel @Inject constructor(
     private val favoriteRepository: FavoriteRepository,
     private val movieRepository: MovieRepository,
+    private val settingsRepository: SettingsRepository,
 ) : ViewModel() {
 
     /** 「想看」列表 */
@@ -54,4 +57,23 @@ class MyListViewModel @Inject constructor(
     val genres: StateFlow<List<Genre>> = movieRepository.getMovieGenres()
         .catch { emit(emptyList()) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** 上映提醒总开关（来自 DataStore，改完由 Application 统一同步 WorkManager） */
+    val reminderEnabled: StateFlow<Boolean> = settingsRepository.settings
+        .map { settings -> settings.reminderEnabled }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
+    /**
+     * 当前生效的提醒时间（HH:mm）。
+     *
+     * 本页只展示、不修改：总开关与时间都在「设置」页统一维护，
+     * 避免同一个配置出现两个互相打架的入口。
+     */
+    val reminderTimeLabel: StateFlow<String> = settingsRepository.settings
+        .map { settings -> settings.reminderTimeLabel }
+        .stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(5_000),
+            AppSettings.DEFAULT.reminderTimeLabel,
+        )
 }

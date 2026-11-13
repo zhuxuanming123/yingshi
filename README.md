@@ -14,6 +14,7 @@
 | 网络 | Retrofit + OkHttp + Gson |
 | 图片 | Coil |
 | 数据库 | Room |
+| 配置存储 | Jetpack DataStore（Preferences） |
 | 依赖注入 | Hilt |
 | 后台任务 | WorkManager |
 | 视频播放 | Media3 (ExoPlayer) |
@@ -47,7 +48,7 @@ adb shell settings put global http_proxy 10.0.2.2:7897
 
 ### 4. 运行
 
-连接设备/模拟器（API ≥ 24），点击 Run。已实现 4 个页面：首页 / 搜索 / 我的片单 / 详情。
+连接设备/模拟器（API ≥ 24），点击 Run。已实现 5 个页面：首页 / 搜索 / 我的片单 / 详情 / 设置。
 
 ---
 
@@ -62,28 +63,30 @@ adb shell settings put global http_proxy 10.0.2.2:7897
 │       ├── AndroidManifest.xml
 │       ├── res/
 │       └── java/com/b8/movietracker/
-│           ├── B8Application.kt      # Hilt 入口 + Coil 图片配置
-│           ├── MainActivity.kt       # Compose 入口
+│           ├── B8Application.kt      # Hilt 入口 + Coil 图片配置 + 提醒配置同步
+│           ├── MainActivity.kt       # Compose 入口（SplashScreen 等配置就绪再渲染）
+│           ├── MainViewModel.kt      # 启动期读取主题配置，避免主题闪烁
 │           ├── data/
 │           │   ├── remote/           # 网络层：TmdbApiService / safeApiCall / MovieMapper / 拦截器 / DTO
-│           │   ├── local/            # 本地层：Room（entity / dao / db / Mapper，含搜索历史）
-│           │   └── repository/       # 仓库实现：TmdbMovieRepository / RoomFavoriteRepository / RoomSearchHistoryRepository
+│           │   ├── local/            # 本地层：Room（entity / dao / db / Mapper）+ DataStore（配置项）
+│           │   └── repository/       # 仓库实现：TmdbMovieRepository / RoomFavoriteRepository / RoomSearchHistoryRepository / DataStoreSettingsRepository
 │           ├── domain/
-│           │   ├── model/            # 领域模型：Movie / Genre / FilterCriteria
-│           │   ├── repository/       # 仓库接口：MovieRepository / FavoriteRepository / SearchHistoryRepository
+│           │   ├── model/            # 领域模型：Movie / Genre / FilterCriteria / AppSettings
+│           │   ├── repository/       # 仓库接口：MovieRepository / FavoriteRepository / SearchHistoryRepository / SettingsRepository
 │           │   ├── filter/           # 筛选引擎：FilterEngine
+│           │   ├── recommend/        # 推荐引擎：RecommendEngine
 │           │   └── statistics/       # 统计模块：StatisticsManager
-│           ├── di/                   # Hilt：NetworkModule / RepositoryModule / DatabaseModule
+│           ├── di/                   # Hilt：NetworkModule / RepositoryModule / DatabaseModule / DataStoreModule
 │           ├── notification/         # 通知：NotificationHelper（上映提醒）
 │           ├── player/               # 播放器：PlayerManager（ExoPlayer 封装）
-│           ├── worker/               # 后台任务：WorkManager（定时扫描片单）
+│           ├── worker/               # 后台任务：WorkManager（定时扫描片单 / 按配置时间调度）
 │           ├── ui/
 │           │   ├── common/           # UiState + 通用状态视图
 │           │   ├── components/       # MovieListItem / PosterImage / VideoPlayer
-│           │   ├── home/ search/ mylist/ detail/   # 4 个页面
+│           │   ├── home/ search/ mylist/ detail/ settings/   # 5 个页面
 │           │   ├── navigation/       # NavHost + 路由
 │           │   └── theme/
-│           └── util/                 # ImageUrlBuilder / DateUtils
+│           └── util/                 # ImageUrlBuilder / DateUtils / ImageCacheManager
 ```
 
 ---
@@ -121,7 +124,7 @@ UI 层 (Compose) → ViewModel（StateFlow）→ Repository → 数据源
 sealed interface UiState<out T> { Loading / Success<T> / Empty / Error }
 ```
 
-4 个页面统一用它表达状态，配合 `UiStateView` 一键渲染加载/空/错误/成功四种视图。
+4 个业务页面统一用它表达状态，配合 `UiStateView` 一键渲染加载/空/错误/成功四种视图。
 
 ---
 
@@ -147,6 +150,7 @@ sealed interface UiState<out T> { Loading / Success<T> / Empty / Error }
 - `@HiltWorker` + `HiltWorkerFactory` 实现 Worker 依赖注入。
 - `NotificationHelper` 通知渠道 + `PendingIntent` 点击跳详情页。
 - 通知权限（Android 13+）申请与拒绝降级处理。
+- 开关与时间收敛到「设置」页（DataStore 单一来源），「我的片单」只展示当前状态并可跳转设置，避免两处开关互相矛盾。
 
 ### 3. 预告片播放（Media3）
 
@@ -176,6 +180,29 @@ sealed interface UiState<out T> { Loading / Success<T> / Empty / Error }
 - 纯 Kotlin 模块（domain/statistics），输入已看列表，输出统计结果。
 - 统计：已看总数、平均评分、本月观影数、类型分布（groupingBy）。
 
+### 8. 推荐算法（RecommendEngine）
+
+- 纯 Kotlin 标签加权推荐（domain/recommend），与 UI/数据层解耦，可独立单元测试。
+- 三步：提取用户类型标签 → 按状态/评分/时间加权 → 匹配候选生成推荐。
+- 权重规则：已看 2.0 / 想看 1.0 + 评分÷10 + 近期观影 0.5。
+- 首页「为你推荐」横向板块，combine 用户行为与热门自动刷新。
+- 行为数据不足时降级展示热门榜单（冷启动处理）。
+
+### 9. 设置中心与配置持久化（Jetpack DataStore）
+
+- 独立「设置」页（底部导航第 4 个 Tab），5 大分区：外观 / 上映提醒 / 默认筛选偏好 / 存储 / 关于。
+- `SettingsRepository` 统一收口：接口只暴露 `Flow<AppSettings>` + 若干 `suspend` 写方法；实现 `DataStoreSettingsRepository` 用 Preferences DataStore（`b8_settings`），读走 `data.catch { emit(emptyPreferences()) }.map {}`，写统一 `dataStore.edit {}` 并 `withContext(Dispatchers.IO)`，替代 SharedPreferences。
+- 主题模式：跟随系统 / 浅色 / 深色；`Theme.kt` 暴露 `themeMode` 参数，`darkColorScheme()` + `values-night` 资源配合。
+- 主题无闪烁：`MainViewModel` 以 `SharingStarted.Eagerly` 先读出配置，`MainActivity` 用 `installSplashScreen()` + `setKeepOnScreenCondition` 把系统启动屏保留到配置就绪，首帧即正确主题。
+- 设置 → WorkManager 实时同步：`B8Application` 观察配置流，开关打开按 `reminderHour/Minute` 计算 `initialDelay` 调度周期任务（配置变更 `CANCEL_AND_REENQUEUE`），关闭即取消；Worker 执行前再校验一次开关（双保险）。
+- 图片缓存：`ImageCacheManager` 读取 Coil 磁盘缓存大小并支持一键清理（内存 + 磁盘）。
+
+### 10. 首页下拉刷新与分页加载
+
+- 下拉刷新：`PullToRefreshBox`（`ui/components`）封装 material3 1.2.x 的 `PullToRefreshContainer + nestedScrollConnection`（该版本还没有官方的 `PullToRefreshBox`），下拉超过阈值松手触发 `HomeViewModel.refresh()`；刷新期间保留旧列表只转指示器，不闪白、失败也不清空内容。
+- 分页加载：`MovieRepository.getPopularMovies(page)` / `discoverMovies(criteria, page)` 透传 `page`；`HomeViewModel` 维护 `currentPage / isLoadingMore / hasMore`，列表滑到倒数第 3 条自动请求下一页并 `distinctBy { id }` 追加；单页不足 20 条判定到底，底部显示「没有更多了」。
+- 刷新/分页都按当前筛选条件走（有筛选走 discover，无筛选走热门榜），第一页仍沿用「默认筛选偏好」。
+
 ---
 
 ## 九、API Key 安全管理
@@ -200,6 +227,8 @@ local.properties（.gitignore 忽略）
 - ✅ 预告片播放（Media3 + TMDB 视频接口，跳转 YouTube 观看）
 - ✅ 高级筛选与搜索历史（FilterEngine + 类型/评分/年份/排序 + Room 历史）
 - ✅ 观影记录与个人评分（评分/短评 + 想看/已看 Tab + 统计模块）
-- ⬜ 列表分页加载
+- ✅ 本地个性化推荐（RecommendEngine 标签加权算法）
+- ✅ 设置中心与配置持久化（Jetpack DataStore：主题模式 / 提醒开关与时间 / 默认筛选 / 缓存清理）
+- ✅ 首页下拉刷新 + 列表分页加载（滑到底部自动加载下一页）
 - ⬜ P1 桌面小组件（Glance + WorkManager）
-- ⬜ 打磨（深色模式 / 错误重试 / 性能 / 打包）
+- ⬜ 打磨（错误重试 / 性能 / 打包）

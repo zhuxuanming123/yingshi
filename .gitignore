@@ -23,3 +23,6 @@ captures/
 *.apk
 *.aab
 *.keystore
+
+# 本机调试产物（adb 截图、临时文件）
+.tmp/

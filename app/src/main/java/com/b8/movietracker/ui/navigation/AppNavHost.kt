@@ -5,6 +5,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -24,6 +25,7 @@ import com.b8.movietracker.ui.detail.DetailScreen
 import com.b8.movietracker.ui.home.HomeScreen
 import com.b8.movietracker.ui.mylist.MyListScreen
 import com.b8.movietracker.ui.search.SearchScreen
+import com.b8.movietracker.ui.settings.SettingsScreen
 
 /**
  * 路由常量集中定义（避免手写字符串散落各处导致拼写错误）。
@@ -32,6 +34,7 @@ object Routes {
     const val HOME = "home"                 // 首页
     const val SEARCH = "search"             // 搜索页
     const val MY_LIST = "my_list"           // 我的片单
+    const val SETTINGS = "settings"         // 设置中心
     const val DETAIL = "detail/{movieId}"   // 详情页（带路径参数）
 
     /** 生成详情页路由，如 detail/3 */
@@ -39,7 +42,7 @@ object Routes {
 }
 
 /**
- * 应用根组件：底部导航（3 个 Tab）+ NavHost 页面容器。
+ * 应用根组件：底部导航（4 个 Tab：首页 / 搜索 / 我的片单 / 设置）+ NavHost 页面容器。
  *
  * @param initialMovieId 非空时表示"从通知点击进入"，启动后自动导航到对应详情页
  */
@@ -58,8 +61,10 @@ fun MovieTrackerApp(initialMovieId: Long? = null) {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
 
-    // 详情页不显示底部导航栏（只在三个主页显示）
-    val showBottomBar = currentRoute in setOf(Routes.HOME, Routes.SEARCH, Routes.MY_LIST)
+    // 详情页不显示底部导航栏（只在四个主页面显示）
+    val showBottomBar = currentRoute in setOf(
+        Routes.HOME, Routes.SEARCH, Routes.MY_LIST, Routes.SETTINGS,
+    )
 
     // 底部 Tab 切换的通用逻辑：避免重复入栈，并保留各 Tab 的状态
     val navigateToTab: (String) -> Unit = { route ->
@@ -92,6 +97,12 @@ fun MovieTrackerApp(initialMovieId: Long? = null) {
                         icon = { Icon(Icons.Filled.List, contentDescription = "我的片单") },
                         label = { Text("我的片单") },
                     )
+                    NavigationBarItem(
+                        selected = currentRoute == Routes.SETTINGS,
+                        onClick = { navigateToTab(Routes.SETTINGS) },
+                        icon = { Icon(Icons.Filled.Settings, contentDescription = "设置") },
+                        label = { Text("设置") },
+                    )
                 }
             }
         },
@@ -115,9 +126,16 @@ fun MovieTrackerApp(initialMovieId: Long? = null) {
             }
             // 我的片单
             composable(Routes.MY_LIST) {
-                MyListScreen(onMovieClick = { movieId ->
-                    navController.navigate(Routes.detail(movieId))
-                })
+                MyListScreen(
+                    onMovieClick = { movieId ->
+                        navController.navigate(Routes.detail(movieId))
+                    },
+                    onOpenSettings = { navigateToTab(Routes.SETTINGS) },
+                )
+            }
+            // 设置中心
+            composable(Routes.SETTINGS) {
+                SettingsScreen()
             }
             // 详情页（列表 → 详情 导航，任务1 的核心要求）
             composable(

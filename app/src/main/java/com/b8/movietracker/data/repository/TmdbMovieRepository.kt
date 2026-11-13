@@ -27,9 +27,9 @@ class TmdbMovieRepository @Inject constructor(
     private val apiService: TmdbApiService,
 ) : MovieRepository {
 
-    /** 热门电影（本阶段拉第 1 页，阶段3 做分页加载） */
-    override fun getPopularMovies(): Flow<List<Movie>> = flow {
-        val response = safeApiCall { apiService.getPopularMovies(page = 1) }
+    /** 热门电影（支持分页：首页每次滑到底部加载下一页） */
+    override fun getPopularMovies(page: Int): Flow<List<Movie>> = flow {
+        val response = safeApiCall { apiService.getPopularMovies(page = page) }
         emit(response.results.map(MovieMapper::toMovie))
     }.flowOn(Dispatchers.IO)
 
@@ -63,8 +63,8 @@ class TmdbMovieRepository @Inject constructor(
         emit(response.genres.map { Genre(it.id, it.name) })
     }.flowOn(Dispatchers.IO)
 
-    /** 按筛选条件发现影片（任务1：组合筛选，条件由 FilterEngine 组装） */
-    override fun discoverMovies(criteria: FilterCriteria): Flow<List<Movie>> = flow {
+    /** 按筛选条件发现影片（任务1：组合筛选，条件由 FilterEngine 组装；支持分页） */
+    override fun discoverMovies(criteria: FilterCriteria, page: Int): Flow<List<Movie>> = flow {
         val query = FilterEngine.buildQuery(criteria)
         val response = safeApiCall {
             apiService.discoverMovies(
@@ -73,6 +73,7 @@ class TmdbMovieRepository @Inject constructor(
                 fromDate = query["primary_release_date.gte"],
                 toDate = query["primary_release_date.lte"],
                 sortBy = query["sort_by"] ?: "popularity.desc",
+                page = page,
             )
         }
         emit(response.results.map(MovieMapper::toMovie))

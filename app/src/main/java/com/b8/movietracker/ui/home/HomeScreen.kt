@@ -2,6 +2,7 @@ package com.b8.movietracker.ui.home
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -15,13 +16,16 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -29,6 +33,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -37,6 +42,7 @@ import com.b8.movietracker.domain.model.Movie
 import com.b8.movietracker.ui.common.UiStateView
 import com.b8.movietracker.ui.components.MovieListItem
 import com.b8.movietracker.ui.components.PosterImage
+import com.b8.movietracker.ui.components.PullToRefreshBox
 
 /**
  * 首页：为你推荐 + 热门影视列表 + 筛选入口。
@@ -50,7 +56,23 @@ fun HomeScreen(
     val genres by viewModel.genres.collectAsStateWithLifecycle()
     val currentCriteria by viewModel.currentCriteria.collectAsStateWithLifecycle()
     val recommendedMovies by viewModel.recommendedMovies.collectAsStateWithLifecycle()
+    val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
+    val isLoadingMore by viewModel.isLoadingMore.collectAsStateWithLifecycle()
+    val hasMore by viewModel.hasMore.collectAsStateWithLifecycle()
     var showFilter by remember { mutableStateOf(false) }
+
+    val listState = rememberLazyListState()
+    // 滑到倒数第 3 条时自动请求下一页：列表越往下滑，越会触发一次新的加载
+    val reachedBottom by remember {
+        derivedStateOf {
+            val lastVisible = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+            val total = listState.layoutInfo.totalItemsCount
+            total > 0 && lastVisible >= total - 3
+        }
+    }
+    LaunchedEffect(reachedBottom) {
+        if (reachedBottom) viewModel.loadMore()
+    }
 
     LaunchedEffect(showFilter) {
         if (showFilter && genres.isEmpty()) {
@@ -75,30 +97,67 @@ fun HomeScreen(
             }
         }
 
-        UiStateView(
-            state = uiState,
-            onRetry = {
-                if (currentCriteria.isEmpty) {
-                    viewModel.loadPopularMovies()
-                } else {
-                    viewModel.applyFilter(currentCriteria)
-                }
-            },
-        ) { movies ->
-            LazyColumn {
-                // 为你推荐板块（任务3：横向滑动 Top10）
-                if (recommendedMovies.isNotEmpty()) {
-                    item {
-                        RecommendSection(
-                            movies = recommendedMovies,
-                            onMovieClick = onMovieClick,
-                        )
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = viewModel::refresh,
+            modifier = Modifier.weight(1f),
+        ) {
+            UiStateView(
+                state = uiState,
+                onRetry = {
+                    if (currentCriteria.isEmpty) {
+                        viewModel.loadPopularMovies()
+                    } else {
+                        viewModel.applyFilter(currentCriteria)
                     }
-                }
-                // 热门列表
-                items(movies, key = { it.id }) { movie ->
-                    MovieListItem(movie = movie, onClick = { onMovieClick(movie.id) })
-                    HorizontalDivider()
+                },
+            ) { movies ->
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier.fillMaxSize(),
+                ) {
+                    // 为你推荐板块（任务3：横向滑动 Top10）
+                    if (recommendedMovies.isNotEmpty()) {
+                        item {
+                            RecommendSection(
+                                movies = recommendedMovies,
+                                onMovieClick = onMovieClick,
+                            )
+                        }
+                    }
+                    // 热门列表（分页追加）
+                    items(movies, key = { it.id }) { movie ->
+                        MovieListItem(movie = movie, onClick = { onMovieClick(movie.id) })
+                        HorizontalDivider()
+                    }
+                    // 底部加载状态
+                    if (movies.isNotEmpty()) {
+                        item(key = "load_more_footer") {
+                            when {
+                                isLoadingMore -> Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(24.dp),
+                                        strokeWidth = 2.dp,
+                                    )
+                                }
+
+                                !hasMore -> Text(
+                                    text = "没有更多了",
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                                    textAlign = TextAlign.Center,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }

@@ -7,9 +7,14 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- 检测网络状态：用于离线提示（阶段8细化） -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-    <!-- 通知权限：Android 13+ 发送通知前需运行时申请（阶段后续"更新提醒"用） -->
+    <!-- 通知权限：Android 13+ 发送通知前需运行时申请（上映提醒） -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!--
+        application 使用「启动主题」Theme.B8MovieTracker.Starting：
+        冷启动时先显示纯色启动画面（深浅色由 values/values-night 的 color 决定），
+        MainActivity 读完 DataStore 配置后再切到真实主题，避免主题闪烁。
+    -->
     <application
         android:name=".B8Application"
         android:allowBackup="true"
@@ -17,21 +22,38 @@
         android:label="@string/app_name"
         android:roundIcon="@drawable/ic_launcher"
         android:supportsRtl="true"
-        android:theme="@style/Theme.B8MovieTracker"
+        android:theme="@style/Theme.B8MovieTracker.Starting"
         android:networkSecurityConfig="@xml/network_security_config"
         tools:targetApi="31">
 
-        <!-- 入口 Activity -->
+        <!-- 入口 Activity（主题继承 application，无需重复声明） -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:configChanges="orientation|screenSize"
-            android:label="@string/app_name"
-            android:theme="@style/Theme.B8MovieTracker">
+            android:label="@string/app_name">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!--
+            Hilt + WorkManager 的正确姿势：关闭 WorkManager 的自动初始化。
+            自动初始化由 androidx.startup 的 ContentProvider 触发，它比
+            Application.onCreate() 更早执行，此时 Hilt 还没来得及注入
+            HiltWorkerFactory，会抛 UninitializedPropertyAccessException。
+            关掉之后 WorkManager 改为「按需初始化」：
+            getInstance() 时读取 B8Application.workManagerConfiguration（已注入好工厂）。
+        -->
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false"
+            tools:node="merge">
+            <meta-data
+                android:name="androidx.work.WorkManagerInitializer"
+                tools:node="remove" />
+        </provider>
     </application>
 </manifest>

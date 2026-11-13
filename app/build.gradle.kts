@@ -87,6 +87,8 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.ktx)    // Lifecycle 基础
     implementation(libs.androidx.lifecycle.viewmodel.ktx)  // ViewModel + viewModelScope
     implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.datastore.preferences)    // DataStore：配置项规范持久化
+    implementation(libs.androidx.core.splashscreen)        // 启动画面：主题配置生效后再出首帧
 
     // ===================== Jetpack Compose =====================
     implementation(platform(libs.androidx.compose.bom))    // BOM 统一 Compose 各库版本

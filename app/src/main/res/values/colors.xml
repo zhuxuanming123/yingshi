@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 启动画面背景：浅色 -->
+    <color name="splash_background">#FFFFFF</color>
+    <!-- 窗口背景：Compose 绘制之前的一帧，避免闪白 -->
+    <color name="window_background">#FFFFFF</color>
+</resources>

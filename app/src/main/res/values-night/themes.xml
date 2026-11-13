@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+        深色模式下的运行主题。
+        窗口背景用深色，配合启动画面（values-night/colors.xml）避免深色模式下启动闪白。
+    -->
+    <style name="Theme.B8MovieTracker" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/window_background</item>
+    </style>
+</resources>

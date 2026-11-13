@@ -15,8 +15,8 @@ import kotlinx.coroutines.flow.Flow
  */
 interface MovieRepository {
 
-    /** 获取热门影片列表 */
-    fun getPopularMovies(): Flow<List<Movie>>
+    /** 获取热门影片列表（page 从 1 开始，用于首页分页加载） */
+    fun getPopularMovies(page: Int = 1): Flow<List<Movie>>
 
     /** 获取影片详情 */
     fun getMovieDetail(movieId: Long): Flow<Movie>
@@ -30,6 +30,6 @@ interface MovieRepository {
     /** 获取影片类型字典（任务1：筛选） */
     fun getMovieGenres(): Flow<List<Genre>>
 
-    /** 按筛选条件发现影片（任务1：组合筛选） */
-    fun discoverMovies(criteria: FilterCriteria): Flow<List<Movie>>
+    /** 按筛选条件发现影片（任务1：组合筛选；page 从 1 开始，用于分页） */
+    fun discoverMovies(criteria: FilterCriteria, page: Int = 1): Flow<List<Movie>>
 }
