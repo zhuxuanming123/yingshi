@@ -1,5 +1,6 @@
 package com.b8.movietracker.ui.detail
 
+import android.content.Context
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -7,21 +8,27 @@ import com.b8.movietracker.domain.model.Movie
 import com.b8.movietracker.domain.repository.FavoriteRepository
 import com.b8.movietracker.domain.repository.MovieRepository
 import com.b8.movietracker.ui.common.UiState
+import com.b8.movietracker.util.GallerySaver
+import com.b8.movietracker.util.ShareCardGenerator
+import com.b8.movietracker.util.ShareCardStore
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
+import java.util.Locale
 import javax.inject.Inject
 
 /**
- * 详情 ViewModel：详情 + 收藏状态（想看/已看）+ 预告片 + 观影记录。
+ * 详情 ViewModel：详情 + 收藏状态（想看/已看）+ 预告片 + 观影记录 + 分享卡片。
  */
 @HiltViewModel
 class DetailViewModel @Inject constructor(
     private val movieRepository: MovieRepository,
     private val favoriteRepository: FavoriteRepository,
+    @ApplicationContext private val context: Context,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
@@ -42,6 +49,18 @@ class DetailViewModel @Inject constructor(
     /** 预告片 YouTube key */
     private val _trailerKey = MutableStateFlow<String?>(null)
     val trailerKey: StateFlow<String?> = _trailerKey.asStateFlow()
+
+    /** 分享卡片状态（Idle / Generating / Ready / Error） */
+    private val _shareCardState = MutableStateFlow<ShareCardState>(ShareCardState.Idle)
+    val shareCardState: StateFlow<ShareCardState> = _shareCardState.asStateFlow()
+
+    /** 一次性的用户提示（保存结果等），显示后由界面层调 [clearUserMessage] 清空 */
+    private val _userMessage = MutableStateFlow<String?>(null)
+    val userMessage: StateFlow<String?> = _userMessage.asStateFlow()
+
+    /** 是否正在生成，避免连点生成多张 */
+    private val isGenerating: Boolean
+        get() = _shareCardState.value is ShareCardState.Generating
 
     init {
         loadDetail()
@@ -102,5 +121,68 @@ class DetailViewModel @Inject constructor(
                 )
             )
         }
+    }
+
+    // ===================== 分享卡片 =====================
+
+    /**
+     * 生成分享卡片。
+     *
+     * 合成与写文件都在 [viewModelScope] 的后台线程执行（生成器内部已切到 Default/IO），
+     * 界面只通过 [shareCardState] 展示 Generating 加载态，主线程不做任何重活。
+     */
+    fun generateShareCard() {
+        if (isGenerating) return
+        val movie = (_uiState.value as? UiState.Success)?.data ?: return
+
+        viewModelScope.launch {
+            _shareCardState.value = ShareCardState.Generating
+            runCatching {
+                val bitmap = ShareCardGenerator.generate(context, movie)
+                val file = ShareCardStore.newCacheFile(context, movie.id)
+                ShareCardStore.write(bitmap, file)
+                ShareCardState.Ready(bitmap, file)
+            }.onSuccess { ready ->
+                _shareCardState.value = ready
+            }.onFailure { error ->
+                _shareCardState.value = ShareCardState.Error(
+                    error.message?.takeIf { it.isNotBlank() } ?: "分享卡片生成失败，请重试",
+                )
+            }
+        }
+    }
+
+    /** 关闭预览 / 取消生成 */
+    fun dismissShareCard() {
+        _shareCardState.value = ShareCardState.Idle
+    }
+
+    /**
+     * 保存当前卡片到相册。
+     *
+     * 只有界面层已经确认权限（Android 9 及以下）时才会调用；
+     * 保存失败只提示，不影响卡片预览与系统分享。
+     */
+    fun saveShareCard() {
+        val ready = _shareCardState.value as? ShareCardState.Ready ?: return
+        viewModelScope.launch {
+            val displayName = String.format(
+                Locale.US,
+                "B8_%d_%d.png",
+                movieId,
+                System.currentTimeMillis(),
+            )
+            val saved = GallerySaver.save(context, ready.bitmap, displayName)
+            _userMessage.value = if (saved) "已保存到相册" else "保存失败，请检查存储空间后重试"
+        }
+    }
+
+    /** 存储权限被拒绝时的降级提示：分享照常可用 */
+    fun notifyStoragePermissionDenied() {
+        _userMessage.value = "未授予存储权限，已跳过保存；仍可通过「分享」发送卡片"
+    }
+
+    fun clearUserMessage() {
+        _userMessage.value = null
     }
 }

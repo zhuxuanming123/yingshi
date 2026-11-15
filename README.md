@@ -83,10 +83,10 @@ adb shell settings put global http_proxy 10.0.2.2:7897
 │           ├── ui/
 │           │   ├── common/           # UiState + 通用状态视图
 │           │   ├── components/       # MovieListItem / PosterImage / VideoPlayer
-│           │   ├── home/ search/ mylist/ detail/ settings/   # 5 个页面
+│           │   ├── home/ search/ mylist/ detail/ settings/   # 5 个页面（detail 含分享卡片预览 ShareCardOverlay）
 │           │   ├── navigation/       # NavHost + 路由
 │           │   └── theme/
-│           └── util/                 # ImageUrlBuilder / DateUtils / ImageCacheManager
+│           └── util/                 # ImageUrlBuilder / DateUtils / ImageCacheManager / ShareCardGenerator / ShareCardStore / GallerySaver
 ```
 
 ---
@@ -203,6 +203,16 @@ sealed interface UiState<out T> { Loading / Success<T> / Empty / Error }
 - 分页加载：`MovieRepository.getPopularMovies(page)` / `discoverMovies(criteria, page)` 透传 `page`；`HomeViewModel` 维护 `currentPage / isLoadingMore / hasMore`，列表滑到倒数第 3 条自动请求下一页并 `distinctBy { id }` 追加；单页不足 20 条判定到底，底部显示「没有更多了」。
 - 刷新/分页都按当前筛选条件走（有筛选走 discover，无筛选走热门榜），第一页仍沿用「默认筛选偏好」。
 
+### 11. 影视分享卡片（Canvas 合成 + 系统分享）
+
+- 入口：详情页海报右上角「分享」图标 + 底部「📤 生成分享卡片」按钮，两者都进 `DetailViewModel.generateShareCard()`。
+- 合成：`ShareCardGenerator` 用软件 Canvas 画 1080×1440（3:4）竖版卡片 —— 海报由 Coil 加载（命中磁盘缓存）后 `BitmapShader` 居中裁剪 + 28px 圆角 + 半透明描边；标题/简介用 `StaticLayout` 自动换行并限制行数；配色为深色渐变底 + 顶部强调色渐变条 + 品牌水印，右下标注「数据来自 TMDB」。
+- 线程：海报加载在 IO、绘制在 `Dispatchers.Default`，全程不占主线程；生成期间 `ShareCardOverlay` 显示 `CircularProgressIndicator` + 「正在生成分享卡片…」，并禁止返回键/点击外部关闭，避免半成品。
+- 导出 1（系统分享）：卡片写入 `cacheDir/share/`，经 `FileProvider`（`${applicationId}.fileprovider` + `res/xml/file_paths.xml` 只暴露 `cache/share/`）生成 content:// URI，`ACTION_SEND + FLAG_GRANT_READ_URI_PERMISSION` 拉起系统分享面板 —— Android 10+ 分区存储下**无需任何存储权限**。
+- 导出 2（保存相册）：`GallerySaver` 走 MediaStore（`Pictures/B8MovieTracker`，`IS_PENDING` 先占位后置 0）在后台写入；仅 Android 9 及以下才需要 `WRITE_EXTERNAL_STORAGE`（manifest 中已 `maxSdkVersion="28"`）。
+- 权限降级：存储权限被拒时不阻断流程 —— Toast 提示「仍可通过「分享」发送卡片」，分享入口始终可用。
+- 顺带修掉的稳定性问题：首页推荐流是网络请求，断网/服务异常时异常会冲出 `stateIn` 把 ViewModel 协程打挂（表现为启动即闪退），已在 `recommendedMovies` 链路加 `catch { emit(emptyList()) }` 兜底。
+
 ---
 
 ## 九、API Key 安全管理
@@ -230,5 +240,6 @@ local.properties（.gitignore 忽略）
 - ✅ 本地个性化推荐（RecommendEngine 标签加权算法）
 - ✅ 设置中心与配置持久化（Jetpack DataStore：主题模式 / 提醒开关与时间 / 默认筛选 / 缓存清理）
 - ✅ 首页下拉刷新 + 列表分页加载（滑到底部自动加载下一页）
+- ✅ 影视分享卡片（Canvas 合成卡片 + 系统分享 / 保存相册，FileProvider + MediaStore）
 - ⬜ P1 桌面小组件（Glance + WorkManager）
 - ⬜ 打磨（错误重试 / 性能 / 打包）

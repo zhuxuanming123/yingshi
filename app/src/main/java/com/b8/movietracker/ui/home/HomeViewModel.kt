@@ -75,7 +75,11 @@ class HomeViewModel @Inject constructor(
         repository.getPopularMovies(),       // 候选影片库（热门）
     ) { userMovies, popularMovies ->
         RecommendEngine.recommend(userMovies, popularMovies)
-    }.stateIn(
+    }
+        // 候选流是网络请求：断网时必须兜底，否则异常会冲出 stateIn 把 ViewModel 协程打挂
+        // （表现为应用启动即闪退）。推荐只是首页的次要板块，失败就展示空列表。
+        .catch { emit(emptyList()) }
+        .stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
         initialValue = emptyList(),

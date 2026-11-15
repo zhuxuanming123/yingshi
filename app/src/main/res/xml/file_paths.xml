@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    FileProvider 的可共享路径白名单。
+    分享卡片写在 cache/share/ 下，通过 content:// 授权给目标 App 读取，
+    不需要任何存储权限，也不会把整个缓存目录暴露出去。
+-->
+<paths>
+    <cache-path
+        name="share_cards"
+        path="share/" />
+</paths>

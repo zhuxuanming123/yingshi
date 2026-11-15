@@ -9,6 +9,14 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <!-- 通知权限：Android 13+ 发送通知前需运行时申请（上映提醒） -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!--
+        写相册权限：仅 Android 9 及以下需要。
+        Android 10 起走 MediaStore + 分区存储，往自己的 Pictures 目录写不需要权限；
+        系统分享走 FileProvider + content:// 临时授权，任何版本都不需要权限。
+    -->
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
 
     <!--
         application 使用「启动主题」Theme.B8MovieTracker.Starting：
@@ -54,6 +62,21 @@
             <meta-data
                 android:name="androidx.work.WorkManagerInitializer"
                 tools:node="remove" />
+        </provider>
+
+        <!--
+            分享卡片：把 cache/share/ 下的 PNG 以 content:// 授权给目标 App。
+            exported=false + grantUriPermissions=true：文件本身不对外暴露，
+            只有拿到临时 URI 授权的应用能读，且不需要任何存储权限。
+        -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
         </provider>
     </application>
 </manifest>

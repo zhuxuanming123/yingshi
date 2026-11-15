@@ -1,7 +1,15 @@
 package com.b8.movietracker.ui.detail
 
+import android.Manifest
+import android.content.ClipData
+import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,9 +21,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -23,6 +33,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -33,6 +44,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.b8.movietracker.domain.model.Movie
@@ -41,10 +53,12 @@ import com.b8.movietracker.ui.common.ErrorView
 import com.b8.movietracker.ui.common.LoadingView
 import com.b8.movietracker.ui.common.UiState
 import com.b8.movietracker.ui.components.PosterImage
+import com.b8.movietracker.util.GallerySaver
+import com.b8.movietracker.util.ShareCardStore
 import java.util.Locale
 
 /**
- * 影视详情页：海报、简介、预告片、想看/已看 + 评分。
+ * 影视详情页：海报、简介、预告片、想看/已看 + 评分 + 分享卡片。
  */
 @Composable
 fun DetailScreen(
@@ -55,7 +69,24 @@ fun DetailScreen(
     val isWantToWatch by viewModel.isWantToWatch.collectAsStateWithLifecycle()
     val isWatched by viewModel.isWatched.collectAsStateWithLifecycle()
     val trailerKey by viewModel.trailerKey.collectAsStateWithLifecycle()
+    val shareCardState by viewModel.shareCardState.collectAsStateWithLifecycle()
+    val userMessage by viewModel.userMessage.collectAsStateWithLifecycle()
     var showRatingDialog by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+
+    // Android 9 及以下保存相册才需要存储权限；被拒绝时只提示，分享入口不受影响
+    val storagePermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { granted ->
+        if (granted) viewModel.saveShareCard() else viewModel.notifyStoragePermissionDenied()
+    }
+
+    LaunchedEffect(userMessage) {
+        userMessage?.let { message ->
+            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+            viewModel.clearUserMessage()
+        }
+    }
 
     when (val state = uiState) {
         is UiState.Loading -> LoadingView()
@@ -69,8 +100,33 @@ fun DetailScreen(
             onBack = onBack,
             onToggleWantToWatch = viewModel::toggleWantToWatch,
             onMarkWatched = { showRatingDialog = true },
+            onShare = viewModel::generateShareCard,
         )
     }
+
+    // 分享卡片浮层：生成中 / 预览导出 / 失败重试
+    ShareCardOverlay(
+        state = shareCardState,
+        onDismiss = viewModel::dismissShareCard,
+        onRetry = viewModel::generateShareCard,
+        onShare = {
+            val ready = shareCardState as? ShareCardState.Ready
+            val movie = (uiState as? UiState.Success)?.data
+            if (ready != null && movie != null) launchShareSheet(context, movie, ready)
+        },
+        onSave = {
+            val needsPermission = GallerySaver.needsLegacyStoragePermission() &&
+                ContextCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                ) != PackageManager.PERMISSION_GRANTED
+            if (needsPermission) {
+                storagePermissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+            } else {
+                viewModel.saveShareCard()
+            }
+        },
+    )
 
     // 标记「已看」弹窗
     if (showRatingDialog) {
@@ -84,6 +140,25 @@ fun DetailScreen(
     }
 }
 
+/**
+ * 调起系统分享面板。
+ *
+ * 走 FileProvider 的 content:// URI + FLAG_GRANT_READ_URI_PERMISSION，
+ * 目标 App 只拿到这一次性的读权限，既不用申请存储权限，也不会暴露整个缓存目录。
+ */
+private fun launchShareSheet(context: Context, movie: Movie, ready: ShareCardState.Ready) {
+    val uri: Uri = ShareCardStore.uri(context, ready.file)
+    val score = String.format(Locale.US, "%.1f", movie.voteAverage)
+    val intent = Intent(Intent.ACTION_SEND).apply {
+        type = "image/png"
+        putExtra(Intent.EXTRA_STREAM, uri)
+        putExtra(Intent.EXTRA_TEXT, "《${movie.title}》⭐ $score —— 来自 B8 影视追踪")
+        clipData = ClipData.newRawUri("share_card", uri)
+        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    }
+    context.startActivity(Intent.createChooser(intent, "分享影片卡片"))
+}
+
 /** 详情内容 */
 @Composable
 private fun DetailContent(
@@ -94,6 +169,7 @@ private fun DetailContent(
     onBack: () -> Unit,
     onToggleWantToWatch: () -> Unit,
     onMarkWatched: () -> Unit,
+    onShare: () -> Unit,
 ) {
     val context = LocalContext.current
     Column(
@@ -121,6 +197,20 @@ private fun DetailContent(
                     imageVector = Icons.Filled.ArrowBack,
                     contentDescription = "返回",
                     tint = Color(0xFF333333),
+                )
+            }
+            // 分享入口：生成影片专属分享卡片（后半透明圆底保证在海报上也能看清）
+            IconButton(
+                onClick = onShare,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(8.dp)
+                    .background(Color(0x66000000), CircleShape),
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Share,
+                    contentDescription = "生成分享卡片",
+                    tint = Color.White,
                 )
             }
         }
@@ -196,6 +286,16 @@ private fun DetailContent(
                 ) {
                     Text(if (isWatched) "✓ 已看" else "＋ 已看")
                 }
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            // 次要分享入口：按钮比图标更好发现，两者都进同一个生成流程
+            OutlinedButton(
+                onClick = onShare,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text("📤 生成分享卡片")
             }
         }
     }
