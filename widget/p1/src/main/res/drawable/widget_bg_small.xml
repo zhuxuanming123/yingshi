@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 小号组件背景：深色渐变 + 20dp 圆角（RemoteViews 支持 shape drawable） -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <gradient
+        android:angle="270"
+        android:endColor="@color/widget_bg_end"
+        android:startColor="@color/widget_bg_start" />
+    <corners android:radius="20dp" />
+</shape>

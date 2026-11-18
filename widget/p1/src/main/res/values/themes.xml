@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 小组件模块的主题：演示页是普通 View 界面，不需要 AppCompat/Compose 主题 -->
+    <style name="Theme.B8Widget" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/demo_background</item>
+        <item name="android:statusBarColor">@color/widget_bg_start</item>
+    </style>
+</resources>

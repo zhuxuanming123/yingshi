@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    小组件的「尺寸/刷新策略」声明。
+    - updatePeriodMillis：系统最短只支持 30 分钟；设为 30 分钟兜底刷新
+    - targetCellWidth/Height：Android 12+ 按格子数排布（2×2）
+    - previewLayout：Android 12+ 在小组件选择器中的预览（低版本忽略）
+    - resizeMode：允许用户拉伸
+-->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/widget_small_desc"
+    android:initialLayout="@layout/widget_small"
+    android:minWidth="110dp"
+    android:minHeight="110dp"
+    android:previewLayout="@layout/widget_small"
+    android:resizeMode="horizontal|vertical"
+    android:targetCellWidth="2"
+    android:targetCellHeight="2"
+    android:updatePeriodMillis="1800000"
+    android:widgetCategory="home_screen" />

@@ -18,6 +18,7 @@
 | 依赖注入 | Hilt |
 | 后台任务 | WorkManager |
 | 视频播放 | Media3 (ExoPlayer) |
+| 桌面小组件 | 独立模块 `:widget:p1`（AppWidgetProvider + RemoteViews + ContentProvider 只读共享） |
 
 ---
 
@@ -79,14 +80,25 @@ adb shell settings put global http_proxy 10.0.2.2:7897
 │           ├── di/                   # Hilt：NetworkModule / RepositoryModule / DatabaseModule / DataStoreModule
 │           ├── notification/         # 通知：NotificationHelper（上映提醒）
 │           ├── player/               # 播放器：PlayerManager（ExoPlayer 封装）
+│           ├── provider/             # 跨进程只读共享：MovieContentProvider + MovieProviderContract（供桌面小组件读取片单）
 │           ├── worker/               # 后台任务：WorkManager（定时扫描片单 / 按配置时间调度）
 │           ├── ui/
 │           │   ├── common/           # UiState + 通用状态视图
-│           │   ├── components/       # MovieListItem / PosterImage / VideoPlayer
+│           │   ├── components/       # MovieListItem / PosterImage / VideoPlayer / PullToRefreshBox
 │           │   ├── home/ search/ mylist/ detail/ settings/   # 5 个页面（detail 含分享卡片预览 ShareCardOverlay）
 │           │   ├── navigation/       # NavHost + 路由
 │           │   └── theme/
 │           └── util/                 # ImageUrlBuilder / DateUtils / ImageCacheManager / ShareCardGenerator / ShareCardStore / GallerySaver
+├── widget/
+│   └── p1/                           # 独立伴生模块（另一个 APK）
+│       ├── build.gradle.kts          # applicationId = com.b8.movietracker.widget.p1
+│       └── src/main/
+│           ├── AndroidManifest.xml   # 两个 AppWidgetProvider + 演示页 + 读取权限声明
+│           ├── res/layout|xml|drawable|values/   # 小号 2×2 / 中号 4×3 布局与 widget 配置
+│           └── java/com/b8/movietracker/widget/p1/
+│               ├── data/             # WidgetRepository（读 ContentProvider）/ WidgetData / SampleData
+│               ├── widget/           # 两个 Provider + 基类（goAsync 刷新）/ WidgetRenderer / PosterLoader / WidgetIntents
+│               └── ui/               # WidgetDemoActivity（模块独立演示页）
 ```
 
 ---
@@ -213,6 +225,17 @@ sealed interface UiState<out T> { Loading / Success<T> / Empty / Error }
 - 权限降级：存储权限被拒时不阻断流程 —— Toast 提示「仍可通过「分享」发送卡片」，分享入口始终可用。
 - 顺带修掉的稳定性问题：首页推荐流是网络请求，断网/服务异常时异常会冲出 `stateIn` 把 ViewModel 协程打挂（表现为启动即闪退），已在 `recommendedMovies` 链路加 `catch { emit(emptyList()) }` 兜底。
 
+### 12. 桌面小组件（独立伴生模块 `:widget:p1`）
+
+- 模块形态：**独立 APK**（`applicationId = com.b8.movietracker.widget.p1`），与主 App 同时安装、可单独 `:widget:p1:assembleDebug` 演示；模块自带演示页 `WidgetDemoActivity`（Launcher 入口），可实时预览两款组件、切换示例数据、手动刷新桌面。
+- 两款组件（`AppWidgetProvider` + `RemoteViews`，未引入 Glance，保持模块零多余依赖）：
+  - 小号 2×2：待映影片数量 + 「点击打开我的片单」一键入口；
+  - 中号 4×3：标题栏（「即将上映」+ 总数 + 手动刷新）+ 3 条影片（海报 + 标题 + 「12月18日 上映」）+ 底部「在 App 中管理我的片单 ›」入口。
+- 数据读取：主 App 暴露**只读 `ContentProvider`**（`MovieContentProvider`，authority `com.b8.movietracker.provider`，`readPermission = com.b8.movietracker.permission.READ_MOVIES`，`protectionLevel="normal"`），只允许查询 `movies` / `movies/upcoming` 路径与白名单列，写操作一律抛 `UnsupportedOperationException`；小组件经 `content://com.b8.movietracker.provider/movies/upcoming` 跨进程读取 —— 未安装主 App / 无权限 / 无数据分别显示三套空态文案，不会出现空白。
+- 刷新与生命周期：`onUpdate` 用 `goAsync()` 延长广播生命周期后切 IO 线程「读数据 → 并行下载海报 → `updateAppWidget`」；开机时主 App 的 Provider 可能尚未就绪，读取失败会延迟 1.5s 重试一次；`onEnabled / onDeleted / onDisabled` 处理实例增删，手动刷新走显式广播。
+- 点击跳转：条目携带 `movie_id` 打开主 App 详情页；主 App 侧 `MainActivity` 增加 `onNewIntent` 处理 + `launchMode="singleTop"`，App 已在后台时也能正确跳转（此前只会把旧任务拉到前台）。
+- 海报加载：模块内自建 `PosterLoader`（内存 `LruCache` + `cacheDir/widget_posters` 磁盘缓存 + 4s 超时），避免为一张缩略图引入 Coil 全套依赖；3 张海报并行下载，避免串行超时。
+
 ---
 
 ## 九、API Key 安全管理
@@ -241,5 +264,5 @@ local.properties（.gitignore 忽略）
 - ✅ 设置中心与配置持久化（Jetpack DataStore：主题模式 / 提醒开关与时间 / 默认筛选 / 缓存清理）
 - ✅ 首页下拉刷新 + 列表分页加载（滑到底部自动加载下一页）
 - ✅ 影视分享卡片（Canvas 合成卡片 + 系统分享 / 保存相册，FileProvider + MediaStore）
-- ⬜ P1 桌面小组件（Glance + WorkManager）
+- ✅ P1 桌面小组件（独立 `:widget:p1` 模块：双规格 RemoteViews + ContentProvider 只读共享 Room 片单）
 - ⬜ 打磨（错误重试 / 性能 / 打包）

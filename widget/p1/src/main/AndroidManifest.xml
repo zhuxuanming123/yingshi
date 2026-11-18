@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- 海报需要在小组件侧下载成 Bitmap：RemoteViews 不支持网络图片 URL -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <!--
+        主 App 自定义的只读片单权限。
+        没有它，ContentResolver 查询主 App 的 ContentProvider 会抛 SecurityException；
+        声明后安装时自动授予（normal 级权限，无运行时弹窗）。
+    -->
+    <uses-permission android:name="com.b8.movietracker.permission.READ_MOVIES" />
+
+    <!--
+        Android 11+ 包可见性：小组件要「看见」主 App 才能查它的 Provider、启动它的界面，
+        否则 packageManager.getLaunchIntentForPackage() 会一直返回 null。
+    -->
+    <queries>
+        <package android:name="com.b8.movietracker" />
+        <provider android:authorities="com.b8.movietracker.provider" />
+    </queries>
+
+    <application
+        android:allowBackup="false"
+        android:icon="@drawable/ic_widget_launcher"
+        android:label="@string/widget_app_name"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.B8Widget"
+        tools:targetApi="31">
+
+        <!-- 独立演示入口：不依赖主 App 也能打开，用来预览两款组件并触发刷新 -->
+        <activity
+            android:name=".ui.WidgetDemoActivity"
+            android:exported="true"
+            android:label="@string/widget_app_name">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- 小号组件：待映数量 + 一键打开 App -->
+        <receiver
+            android:name=".widget.SmallUpcomingWidgetProvider"
+            android:exported="false"
+            android:label="@string/widget_small_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_small_info" />
+        </receiver>
+
+        <!-- 中号组件：3 条即将上映（海报 + 标题 + 上映时间），带手动刷新 -->
+        <receiver
+            android:name=".widget.MediumUpcomingWidgetProvider"
+            android:exported="false"
+            android:label="@string/widget_medium_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.b8.movietracker.widget.p1.action.REFRESH" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_medium_info" />
+        </receiver>
+    </application>
+</manifest>

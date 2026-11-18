@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ===== 应用级 ===== -->
+    <string name="widget_app_name">B8 小组件</string>
+
+    <!-- ===== 两款组件 ===== -->
+    <string name="widget_small_name">待映提醒（小号）</string>
+    <string name="widget_medium_name">即将上映（中号）</string>
+    <string name="widget_small_desc">显示片单中待映影片数量，点击一键进入 App</string>
+    <string name="widget_medium_desc">展示 3 条即将上映的影片：海报、标题、上映时间</string>
+
+    <!-- ===== 小号组件文案 ===== -->
+    <string name="widget_small_label">部影片待映</string>
+    <string name="widget_small_hint">点击打开我的片单</string>
+    <string name="widget_small_no_data_hint">打开 App 添加想看的电影</string>
+
+    <!-- ===== 中号组件文案 ===== -->
+    <string name="widget_medium_title">即将上映</string>
+    <string name="widget_medium_count">共 %1$d 部</string>
+    <string name="widget_empty_title">片单里还没有待映影片</string>
+    <string name="widget_empty_hint">打开 App，把想看的电影加入片单</string>
+    <string name="widget_no_app_title">未检测到主应用数据</string>
+    <string name="widget_no_app_hint">请先安装并打开「B8 影视追踪」</string>
+    <string name="widget_denied_title">没有读取片单的权限</string>
+    <string name="widget_denied_hint">请先安装主应用，再重新安装本小组件</string>
+    <string name="widget_untitled">未命名影片</string>
+    <string name="widget_medium_footer">在 App 中管理我的片单 ›</string>
+    <string name="widget_refresh">刷新</string>
+    <string name="widget_poster_desc">影片海报</string>
+    <string name="widget_date_unknown">上映时间待定</string>
+    <string name="widget_date_pattern">%1$s 上映</string>
+
+    <!-- ===== 演示页文案 ===== -->
+    <string name="demo_title">B8 桌面小组件</string>
+    <string name="demo_subtitle">独立伴生模块（P1）· 通过 ContentProvider 读取主 App 片单</string>
+    <string name="demo_section_small">小号（2×2）：待映数量 + 一键打开 App</string>
+    <string name="demo_section_medium">中号（4×3）：3 条即将上映</string>
+    <string name="demo_switch">用示例数据预览（仅演示页生效）</string>
+    <string name="demo_refresh">刷新桌面组件</string>
+    <string name="demo_open_app">打开 B8 影视追踪</string>
+    <string name="demo_tips">添加方式：长按桌面空白处 → 小组件 → 找到「B8 小组件」→ 长按拖到桌面。\n主 App 未安装时组件仍可添加，会展示空态提示。</string>
+    <string name="demo_status_connected">已连接主应用 · 共 %1$d 部待映影片</string>
+    <string name="demo_status_empty">已连接主应用 · 暂无待映影片</string>
+    <string name="demo_status_unavailable">未检测到主应用数据（未安装或未打开过）</string>
+    <string name="demo_status_denied">读取被拒绝：请先安装主应用，再重新安装本小组件</string>
+    <string name="demo_status_sample">当前为示例数据预览，不代表真实片单</string>
+    <string name="demo_refreshed">已通知桌面组件刷新</string>
+    <string name="demo_main_app_missing">未找到主应用，请先安装「B8 影视追踪」</string>
+</resources>

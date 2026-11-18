@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 小组件深色底：与主 App 分享卡片同一套配色，保证视觉一致 -->
+    <color name="widget_bg_start">#1C1B29</color>
+    <color name="widget_bg_end">#121019</color>
+    <color name="widget_accent">#FF6B6B</color>
+    <color name="widget_text_primary">#FFFFFFFF</color>
+    <color name="widget_text_secondary">#B3FFFFFF</color>
+    <color name="widget_poster_placeholder">#22FFFFFF</color>
+
+    <!-- 演示页（浅色界面） -->
+    <color name="demo_background">#F6F6F8</color>
+    <color name="demo_text_primary">#1F1F24</color>
+    <color name="demo_text_secondary">#6B6B76</color>
+    <color name="demo_card">#FFFFFF</color>
+</resources>

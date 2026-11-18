@@ -38,5 +38,6 @@ rootProject.name = "B8MovieTracker"
 
 // 包含的模块：主 App
 include(":app")
-// 阶段7 再引入桌面小组件伴生模块 P1
-// include(":widget:p1")
+// 伴生模块：桌面小组件 P1（独立 APK，可单独安装演示；
+// 通过主 App 暴露的只读 ContentProvider 读取片单数据）
+include(":widget:p1")

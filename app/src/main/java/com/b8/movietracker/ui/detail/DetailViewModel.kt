@@ -95,9 +95,13 @@ class DetailViewModel @Inject constructor(
 
     private fun loadTrailer() {
         viewModelScope.launch {
-            movieRepository.getMovieTrailer(movieId).collect { key ->
-                _trailerKey.value = key
-            }
+            // 预告片属于次要信息：断网时不应让整个 ViewModel 崩溃（会直接把进程带崩），
+            // 失败就静默降级为「暂无预告片」。
+            movieRepository.getMovieTrailer(movieId)
+                .catch { _trailerKey.value = null }
+                .collect { key ->
+                    _trailerKey.value = key
+                }
         }
     }
 
