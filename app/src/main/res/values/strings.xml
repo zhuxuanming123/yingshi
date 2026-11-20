@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">B8 影视追踪</string>
+    <!-- 自定义权限的说明文字（系统「应用权限」页会展示） -->
+    <string name="permission_read_movies">读取 B8 影视追踪片单</string>
 </resources>

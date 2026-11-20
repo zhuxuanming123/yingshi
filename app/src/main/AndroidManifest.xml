@@ -19,6 +19,17 @@
         android:maxSdkVersion="28" />
 
     <!--
+        自定义「读取片单」权限：桌面小组件（独立 APK :widget:p1）靠它读取主 App 的片单。
+        protectionLevel=normal 表示安装时自动授予，不需要运行时弹窗；
+        没有声明该权限的第三方 App 无法跨进程读取 ContentProvider。
+    -->
+    <permission
+        android:name="com.b8.movietracker.permission.READ_MOVIES"
+        android:label="@string/permission_read_movies"
+        android:protectionLevel="normal" />
+    <uses-permission android:name="com.b8.movietracker.permission.READ_MOVIES" />
+
+    <!--
         application 使用「启动主题」Theme.B8MovieTracker.Starting：
         冷启动时先显示纯色启动画面（深浅色由 values/values-night 的 color 决定），
         MainActivity 读完 DataStore 配置后再切到真实主题，避免主题闪烁。
@@ -39,6 +50,7 @@
             android:name=".MainActivity"
             android:exported="true"
             android:configChanges="orientation|screenSize"
+            android:launchMode="singleTop"
             android:label="@string/app_name">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -78,5 +90,16 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
         </provider>
+
+        <!--
+            只读片单 Provider：给桌面小组件（独立 APK）读取 Room 片单。
+            exported=true + readPermission：外部可查询，但必须持有自定义权限，且只能读
+            （insert/update/delete 在代码里一律拒绝）。
+        -->
+        <provider
+            android:name=".provider.MovieContentProvider"
+            android:authorities="com.b8.movietracker.provider"
+            android:exported="true"
+            android:readPermission="com.b8.movietracker.permission.READ_MOVIES" />
     </application>
 </manifest>

@@ -44,14 +44,15 @@ object Routes {
 /**
  * 应用根组件：底部导航（4 个 Tab：首页 / 搜索 / 我的片单 / 设置）+ NavHost 页面容器。
  *
- * @param initialMovieId 非空时表示"从通知点击进入"，启动后自动导航到对应详情页
+ * @param initialMovieId 非空时表示"从通知/桌面小组件进入"，启动后自动导航到对应详情页
+ * @param navigationRequest 跳转请求序号，同一部影片被重复点击时靠它再次触发导航
  */
 @Composable
-fun MovieTrackerApp(initialMovieId: Long? = null) {
+fun MovieTrackerApp(initialMovieId: Long? = null, navigationRequest: Int = 0) {
     val navController = rememberNavController()
 
-    // 通知点击跳转：启动时若有 movieId，导航到详情页
-    LaunchedEffect(Unit) {
+    // 通知/小组件点击跳转：有 movieId 时导航到详情页（App 在前台时由 onNewIntent 递增序号触发）
+    LaunchedEffect(navigationRequest, initialMovieId) {
         if (initialMovieId != null) {
             navController.navigate(Routes.detail(initialMovieId))
         }
